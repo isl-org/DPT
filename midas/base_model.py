@@ -12,5 +12,6 @@ class BaseModel(torch.nn.Module):
 
         if "optimizer" in parameters:
             parameters = parameters["model"]
+            # torch.save(parameters, "model.pt")
 
         self.load_state_dict(parameters)
