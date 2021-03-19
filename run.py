@@ -9,7 +9,7 @@ import argparse
 
 from torchvision.transforms import Compose
 from midas.midas_net import MidasNet
-from midas.midas_net_custom import MidasNet_small
+from midas.midas_net_custom import MidasNet_large
 from midas.transforms import Resize, NormalizeImage, PrepareForNet
 
 
@@ -28,11 +28,20 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
     print("device: %s" % device)
 
     # load network
-    if model_type == "large":
-        model = MidasNet(model_path, non_negative=True)
+    if model_type == "vit_large":
+        model = MidasNet(model_path, backbone="vitl16_384",  blocks={'hooks': [5, 11, 17, 23], 'use_readout': 'project', 'activation': 'relu'}, non_negative=True)
+        net_w, net_h = 384, 384
+    elif model_type == "vit_hybrid":
+        model = MidasNet(model_path, backbone="vitb_rn50_384",  blocks={'hooks': [0, 1, 8, 11], 'use_readout': 'project', 'activation': 'relu'}, non_negative=True)
+        net_w, net_h = 384, 384
+    elif model_type == "vit_base":
+        model = MidasNet(model_path, backbone="vitb16_384",  blocks={'hooks': [2, 5, 8, 11], 'use_readout': 'project', 'activation': 'relu'}, non_negative=True)
+        net_w, net_h = 384, 384
+    elif model_type == "large":
+        model = MidasNet_large(model_path, non_negative=True)
         net_w, net_h = 384, 384
     elif model_type == "small":
-        model = MidasNet_small(model_path, features=64, backbone="efficientnet_lite3", exportable=True, non_negative=True, blocks={'expand': True})
+        model = MidasNet(model_path, features=64, backbone="efficientnet_lite3", exportable=True, non_negative=True, blocks={'expand': True, 'activation': 'relu'})
         net_w, net_h = 256, 256
     else:
         print(f"model_type '{model_type}' not implemented, use: --model_type large")
@@ -57,10 +66,10 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
     model.eval()
     
     if optimize==True:
-        rand_example = torch.rand(1, 3, net_h, net_w)
-        model(rand_example)
-        traced_script_module = torch.jit.trace(model, rand_example)
-        model = traced_script_module
+        # rand_example = torch.rand(1, 3, net_h, net_w)
+        # model(rand_example)
+        # traced_script_module = torch.jit.trace(model, rand_example)
+        # model = traced_script_module
     
         if device == torch.device("cuda"):
             model = model.to(memory_format=torch.channels_last)  
@@ -128,12 +137,14 @@ if __name__ == "__main__":
     )
 
     parser.add_argument('-m', '--model_weights', 
-        default='model-f6b98070.pt',
+        #default='model-f6b98070.pt',
+        default=None,
         help='path to the trained weights of model'
     )
 
+    # 'large', 'small', 'vit_large', 'vit_hybrid', 'vit_base'
     parser.add_argument('-t', '--model_type', 
-        default='large',
+        default='vit_hybrid',
         help='model type: large or small'
     )
 
@@ -142,6 +153,18 @@ if __name__ == "__main__":
     parser.set_defaults(optimize=True)
 
     args = parser.parse_args()
+
+    default_models = {
+        'large': 'model-f6b98070.pt', 
+        'small': 'model-small-70d6b9c8.pt', 
+        'vit_large': 'vit_large-2f21e586.pt', 
+        'vit_hybrid': 'vit_hybrid-501f0c75.pt', 
+        'vit_base': 'vit_base.pt', 
+    }
+
+    if args.model_weights is None:
+        args.model_weights = default_models[args.model_type]
+
 
     # set torch options
     torch.backends.cudnn.enabled = True
