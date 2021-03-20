@@ -188,3 +188,22 @@ def write_depth(path, depth, bits=1):
         cv2.imwrite(path + ".png", out.astype("uint16"))
 
     return
+
+
+def write_segm_img(path, image, prediction, alpha=0.5):
+    """Write depth map to pfm and png file.
+
+    Args:
+        img (str): source image
+        depth (array): depth
+    """
+
+    prediction = np.stack(((prediction*10) % 255, (prediction*100) % 255 , (prediction*1000) % 255), axis=-1)
+
+    rgb_removed_color = cv2.cvtColor(cv2.cvtColor(image.astype("uint8"), cv2.COLOR_BGR2GRAY ) , cv2.COLOR_GRAY2BGR )
+
+    prediction = prediction*alpha + (1.0-alpha)*rgb_removed_color
+
+    cv2.imwrite(path + ".png", prediction.astype("uint8"))
+
+    return

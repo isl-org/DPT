@@ -107,7 +107,7 @@ class Interpolate(nn.Module):
     """Interpolation module.
     """
 
-    def __init__(self, scale_factor, mode):
+    def __init__(self, scale_factor, mode, align_corners=False):
         """Init.
 
         Args:
@@ -119,6 +119,7 @@ class Interpolate(nn.Module):
         self.interp = nn.functional.interpolate
         self.scale_factor = scale_factor
         self.mode = mode
+        self.align_corners = align_corners
 
     def forward(self, x):
         """Forward pass.
@@ -131,7 +132,7 @@ class Interpolate(nn.Module):
         """
 
         x = self.interp(
-            x, scale_factor=self.scale_factor, mode=self.mode, align_corners=False
+            x, scale_factor=self.scale_factor, mode=self.mode, align_corners=self.align_corners
         )
 
         return x
@@ -230,11 +231,11 @@ class ResidualConvUnit_custom(nn.Module):
         self.groups=1
 
         self.conv1 = nn.Conv2d(
-            features, features, kernel_size=3, stride=1, padding=1, bias=True, groups=self.groups
+            features, features, kernel_size=3, stride=1, padding=1, bias=not self.bn, groups=self.groups
         )
         
         self.conv2 = nn.Conv2d(
-            features, features, kernel_size=3, stride=1, padding=1, bias=True, groups=self.groups
+            features, features, kernel_size=3, stride=1, padding=1, bias=not self.bn, groups=self.groups
         )
 
         if self.bn==True:

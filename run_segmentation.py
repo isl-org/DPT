@@ -3,6 +3,7 @@
 import os
 import glob
 import torch
+import torch.nn.functional as F
 import utils
 import cv2
 import argparse
@@ -29,17 +30,13 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
 
     # load network
     if model_type == "vit_large":
-        model = MidasNet(model_path, backbone="vitl16_384",  blocks={'hooks': [5, 11, 17, 23], 'use_readout': 'project', 'activation': 'relu'}, non_negative=True)
-        net_w, net_h = 384, 384
+        model = MidasNet(model_path, backbone="vitl16_384", monodepth=False, num_classes=150,
+            blocks={'hooks': [5, 11, 17, 23], 'use_readout': 'project', 'activation': 'relu', 'aux': True, 'widehead': True, 'batch_norm': True}, non_negative=True)
+        net_w, net_h = 480, 480
     elif model_type == "vit_hybrid":
-        model = MidasNet(model_path, backbone="vitb_rn50_384",  blocks={'hooks': [0, 1, 8, 11], 'use_readout': 'project', 'activation': 'relu'}, non_negative=True)
-        net_w, net_h = 384, 384
-    elif model_type == "large":
-        model = MidasNet_large(model_path, non_negative=True)
-        net_w, net_h = 384, 384
-    elif model_type == "small":
-        model = MidasNet(model_path, features=64, backbone="efficientnet_lite3", exportable=True, non_negative=True, blocks={'expand': True, 'activation': 'relu'})
-        net_w, net_h = 256, 256
+        model = MidasNet(model_path, backbone="vitb_rn50_384", monodepth=False, num_classes=150, 
+            blocks={'hooks': [0, 1, 8, 11], 'use_readout': 'project', 'activation': 'relu', 'aux': True, 'widehead': True, 'batch_norm': True}, non_negative=True)
+        net_w, net_h = 480, 480
     else:
         print(f"model_type '{model_type}' not implemented, use: --model_type large")
         assert False
@@ -55,7 +52,6 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
                 resize_method="upper_bound",
                 image_interpolation_method=cv2.INTER_CUBIC,
             ),
-            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) if model_type=="large" or model_type=="small" else
             NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             PrepareForNet(),
         ]
@@ -99,24 +95,26 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
             if optimize==True and device == torch.device("cuda"):
                 sample = sample.to(memory_format=torch.channels_last)  
                 sample = sample.half()
-            prediction = model.forward(sample)
+            out, auxout = model.forward(sample)
+            
+            out = F.softmax(out, dim=1)
+
             prediction = (
                 torch.nn.functional.interpolate(
-                    prediction.unsqueeze(1),
+                    out,
                     size=img.shape[:2],
                     mode="bicubic",
                     align_corners=False,
                 )
-                .squeeze()
-                .cpu()
-                .numpy()
             )
-
+            prediction = torch.argmax(prediction, dim=1)
+            prediction = prediction.squeeze().cpu().numpy()
+            
         # output
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
         )
-        utils.write_depth(filename, prediction, bits=2)
+        utils.write_segm_img(filename, img * 255.0, prediction, alpha=0.5)
 
     print("finished")
 
@@ -135,12 +133,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument('-m', '--model_weights', 
-        #default='model-f6b98070.pt',
         default=None,
         help='path to the trained weights of model'
     )
 
-    # 'large', 'small', 'vit_large', 'vit_hybrid'
+    # 'vit_large', 'vit_hybrid'
     parser.add_argument('-t', '--model_type', 
         default='vit_hybrid',
         help='model type: large or small'
@@ -153,10 +150,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     default_models = {
-        'large': 'model-f6b98070.pt', 
-        'small': 'model-small-70d6b9c8.pt', 
-        'vit_large': 'vit_large-2f21e586.pt', 
-        'vit_hybrid': 'vit_hybrid-501f0c75.pt', 
+        'vit_large': 'seg_vit_large-b12dca68.pt', 
+        'vit_hybrid': 'seg_vit_hybrid-53898607.pt', 
     }
 
     if args.model_weights is None:

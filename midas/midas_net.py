@@ -4,6 +4,7 @@ https://github.com/thomasjpfan/pytorch_refinenet/blob/master/pytorch_refinenet/r
 """
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from .base_model import BaseModel
 from .blocks import FeatureFusionBlock, FeatureFusionBlock_custom, Interpolate, _make_encoder, forward_vit
@@ -14,13 +15,16 @@ class MidasNet(BaseModel):
     """Network for monocular depth estimation.
     """
 
-    def __init__(self, path=None, features=256, backbone="vitb_rn50_384", non_negative=True, exportable=False, channels_last=False, align_corners=True,
+    def __init__(self, path=None, features=256, backbone="vitb_rn50_384", monodepth=True, num_classes=150, non_negative=True, exportable=False, channels_last=False, align_corners=True,
         blocks={
             'activation': 'relu', 
+            'batch_norm': False,
             'freeze_bn': True,
             'expand': False,
             'hooks': [0, 1, 8, 11],
             'use_readout': 'project',
+            "aux": None,
+            "widehead": False,
             'scale': 1.0,
             'shift': 0.0,
             }):
@@ -40,8 +44,15 @@ class MidasNet(BaseModel):
         self.channels_last = channels_last
         self.blocks = blocks
         self.backbone = backbone
+        self.monodepth = monodepth
+        self.num_classes = num_classes
+        self.dropout_rate = 0.0
 
         self.groups = 1
+
+        self.bn = False
+        if "batch_norm" in self.blocks and self.blocks["batch_norm"] == True:
+            self.bn = True
 
         self.hooks = None
         if "hooks" in self.blocks:
@@ -95,20 +106,71 @@ class MidasNet(BaseModel):
         else:
             self.scratch.activation = nn.Identity()
 
-        self.scratch.refinenet4 = FeatureFusionBlock_custom(features4, self.scratch.activation, deconv=False, bn=False, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet3 = FeatureFusionBlock_custom(features3, self.scratch.activation, deconv=False, bn=False, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet2 = FeatureFusionBlock_custom(features2, self.scratch.activation, deconv=False, bn=False, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet1 = FeatureFusionBlock_custom(features1, self.scratch.activation, deconv=False, bn=False, align_corners=align_corners)
+        self.scratch.refinenet4 = FeatureFusionBlock_custom(features4, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
+        self.scratch.refinenet3 = FeatureFusionBlock_custom(features3, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
+        self.scratch.refinenet2 = FeatureFusionBlock_custom(features2, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
+        self.scratch.refinenet1 = FeatureFusionBlock_custom(features1, self.scratch.activation, deconv=False, bn=self.bn, align_corners=align_corners)
 
-        self.scratch.output_conv = nn.Sequential(
-            nn.Conv2d(features, features//2, kernel_size=3, stride=1, padding=1, groups=self.groups),
-            Interpolate(scale_factor=2, mode="bilinear"),
-            nn.Conv2d(features//2, 32, kernel_size=3, stride=1, padding=1),
-            self.scratch.activation,
-            nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0),
-            nn.ReLU(True) if non_negative else nn.Identity(),
-            nn.Identity(),
-        )
+        if self.monodepth == True:
+            self.scratch.output_conv = nn.Sequential(
+                nn.Conv2d(features, features//2, kernel_size=3, stride=1, padding=1, groups=self.groups),
+                Interpolate(scale_factor=2, mode="bilinear"),
+                nn.Conv2d(features//2, 32, kernel_size=3, stride=1, padding=1),
+                self.scratch.activation,
+                nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0),
+                nn.ReLU(True) if non_negative else nn.Identity(),
+                nn.Identity(),
+            )
+        else:
+            if self.blocks["widehead"] == True:
+                print("using a wide head")
+                self.scratch.output_conv = nn.Sequential(
+                    nn.Conv2d(features, features, 3, padding=1, bias=False),
+                    nn.BatchNorm2d(features),
+                    nn.ReLU(True),
+                    nn.Dropout(0.1, False),
+                    nn.Conv2d(features, self.num_classes, 1),
+                    Interpolate(
+                        scale_factor=2, mode="bilinear", align_corners=align_corners
+                    ),
+                )
+            elif self.blocks["widehead_hr"] == True:
+                print("using a wide hr head")
+                self.scratch.output_conv = nn.Sequential(
+                    nn.Conv2d(features, features, 3, padding=1),
+                    Interpolate(
+                        scale_factor=2, mode="bilinear", align_corners=align_corners
+                    ),
+                    nn.Dropout(0.1, False),
+                    nn.Conv2d(features, self.num_classes, 1),
+                )
+            else:
+                self.scratch.output_conv = nn.Sequential(
+                    nn.Conv2d(
+                        features,
+                        features // 2,
+                        kernel_size=3,
+                        stride=1,
+                        padding=1,
+                        groups=1,
+                    ),
+                    Interpolate(
+                        scale_factor=2, mode="bilinear", align_corners=align_corners
+                    ),
+                    nn.Dropout(self.dropout_rate, False),
+                    nn.Conv2d(
+                        features // 2, self.num_classes, kernel_size=1, stride=1, padding=0
+                    ),
+                )
+
+        if "aux" in self.blocks and self.blocks["aux"] == True:
+            self.auxlayer = nn.Sequential(
+                nn.Conv2d(features2, features2, 3, padding=1, bias=False),
+                nn.BatchNorm2d(features2),
+                nn.ReLU(True),
+                nn.Dropout(self.dropout_rate, False),
+                nn.Conv2d(features2, self.num_classes, 1),
+            )
         
         if path:
             self.load(path)
@@ -165,7 +227,17 @@ class MidasNet(BaseModel):
         out = self.scratch.output_conv(path_1)
 
         out = out * self.scale + self.shift
-
-        return torch.squeeze(out, dim=1)
+                
+        if hasattr(self, "auxlayer"):
+            auxout = self.auxlayer(path_2)
+            auxout = F.interpolate(
+                auxout, size=tuple(out.shape[2:]), mode="bilinear", align_corners=True
+            )
+            return out, auxout
+        
+        if self.monodepth == True:
+            return torch.squeeze(out, dim=1)
+        else:
+            return out
 
 
