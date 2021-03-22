@@ -96,7 +96,6 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 sample = sample.half()
 
             out = model.forward(sample)
-            out = F.softmax(out, dim=1)
 
             prediction = torch.nn.functional.interpolate(
                 out, size=img.shape[:2], mode="bicubic", align_corners=False
