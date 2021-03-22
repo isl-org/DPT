@@ -66,6 +66,10 @@ Please cite our paper if you use this code or any of the models:
 }
 ```
 
+### Acknowledgements
+
+Our work extensively builds on [timm](https://github.com/rwightman/pytorch-image-models) and [PyTorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding).
+
 ### License 
 
 MIT License 
