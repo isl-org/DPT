@@ -8,7 +8,7 @@ import cv2
 import argparse
 
 from torchvision.transforms import Compose
-from dpt.midas_net import MidasNet
+from dpt.models import DPTDepthModel
 from dpt.midas_net_custom import MidasNet_large
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 
@@ -31,7 +31,7 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
 
     # load network
     if model_type == "dpt_large":
-        model = MidasNet(
+        model = DPTDepthModel(
             model_path,
             backbone="vitl16_384",
             blocks={
@@ -43,14 +43,9 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "dpt_hybrid":
-        model = MidasNet(
-            model_path,
+        model = DPTDepthModel(
+            path=model_path,
             backbone="vitb_rn50_384",
-            blocks={
-                "hooks": [0, 1, 8, 11],
-                "use_readout": "project",
-                "activation": "relu",
-            },
             non_negative=True,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])

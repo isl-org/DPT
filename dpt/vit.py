@@ -117,13 +117,11 @@ def _resize_pos_embed(self, posemb, gs_h, gs_w):
 def forward_flex(self, x):
     b, c, h, w = x.shape
 
-    # pos_embed = self._resize_pos_embed(self.pos_embed, h//self.patch_embed.patch_size[1], w//self.patch_embed.patch_size[0])
     pos_embed = self._resize_pos_embed(
         self.pos_embed, h // self.patch_size[1], w // self.patch_size[0]
     )
 
     B = x.shape[0]
-    # x = self.patch_embed(x)
 
     if hasattr(self.patch_embed, "backbone"):
         x = self.patch_embed.backbone(x)
@@ -152,7 +150,6 @@ def forward_flex(self, x):
 
     x = self.norm(x)
 
-    # return x[:, 1:]
     return x
 
 
@@ -164,7 +161,6 @@ def get_activation(name):
         activations[name] = output
 
     return hook
-
 
 def get_readout_oper(vit_features, features, use_readout, start_index=1):
     if use_readout == "ignore":
@@ -223,7 +219,6 @@ def _make_vit_b16_backbone(
             kernel_size=4,
             stride=4,
             padding=0,
-            # output_padding=output_padding,
             bias=True,
             dilation=1,
             groups=1,
@@ -247,7 +242,6 @@ def _make_vit_b16_backbone(
             kernel_size=2,
             stride=2,
             padding=0,
-            # output_padding=output_padding,
             bias=True,
             dilation=1,
             groups=1,
@@ -290,12 +284,9 @@ def _make_vit_b16_backbone(
     pretrained.model.start_index = start_index
     pretrained.model.patch_size = [16, 16]
 
-    # Hack: we inject this function into the VisionTransformer instances so that
+    # We inject this function into the VisionTransformer instances so that
     # we can use it with interpolated position embeddings without modifying the library source.
     pretrained.model.forward_flex = types.MethodType(forward_flex, pretrained.model)
-
-    # Hack: we inject this function into the VisionTransformer instances so that
-    # we can use it with interpolated position embeddings without modifying the library source.
     pretrained.model._resize_pos_embed = types.MethodType(
         _resize_pos_embed, pretrained.model
     )
@@ -400,7 +391,6 @@ def _make_vit_b_rn50_backbone(
                 kernel_size=4,
                 stride=4,
                 padding=0,
-                # output_padding=output_padding,
                 bias=True,
                 dilation=1,
                 groups=1,
@@ -424,7 +414,6 @@ def _make_vit_b_rn50_backbone(
                 kernel_size=2,
                 stride=2,
                 padding=0,
-                # output_padding=output_padding,
                 bias=True,
                 dilation=1,
                 groups=1,
@@ -474,11 +463,11 @@ def _make_vit_b_rn50_backbone(
     pretrained.model.start_index = start_index
     pretrained.model.patch_size = [16, 16]
 
-    # Hack: we inject this function into the VisionTransformer instances so that
+    # We inject this function into the VisionTransformer instances so that
     # we can use it with interpolated position embeddings without modifying the library source.
     pretrained.model.forward_flex = types.MethodType(forward_flex, pretrained.model)
 
-    # Hack: we inject this function into the VisionTransformer instances so that
+    # We inject this function into the VisionTransformer instances so that
     # we can use it with interpolated position embeddings without modifying the library source.
     pretrained.model._resize_pos_embed = types.MethodType(
         _resize_pos_embed, pretrained.model
