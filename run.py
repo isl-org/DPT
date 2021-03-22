@@ -27,23 +27,21 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("device: %s" % device)
 
+    net_w = net_h = 384
+
     # load network
-    if model_type == "vit_large":
+    if model_type == "dpt_large":
         model = MidasNet(model_path, backbone="vitl16_384",  blocks={'hooks': [5, 11, 17, 23], 'use_readout': 'project', 'activation': 'relu'}, non_negative=True)
-        net_w, net_h = 384, 384
-    elif model_type == "vit_hybrid":
+        normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    elif model_type == "dpt_hybrid":
         model = MidasNet(model_path, backbone="vitb_rn50_384",  blocks={'hooks': [0, 1, 8, 11], 'use_readout': 'project', 'activation': 'relu'}, non_negative=True)
-        net_w, net_h = 384, 384
-    elif model_type == "large":
+        normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    elif model_type == "midas_v21":
         model = MidasNet_large(model_path, non_negative=True)
-        net_w, net_h = 384, 384
-    elif model_type == "small":
-        model = MidasNet(model_path, features=64, backbone="efficientnet_lite3", exportable=True, non_negative=True, blocks={'expand': True, 'activation': 'relu'})
-        net_w, net_h = 256, 256
+        normalization = NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     else:
-        print(f"model_type '{model_type}' not implemented, use: --model_type large")
-        assert False
-    
+        assert False, f"model_type '{model_type}' not implemented, use: --model_type [dpt_large|dpt_hybrid|midas_v21]"
+
     transform = Compose(
         [
             Resize(
@@ -52,26 +50,19 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
                 resize_target=None,
                 keep_aspect_ratio=True,
                 ensure_multiple_of=32,
-                resize_method="upper_bound",
+                resize_method="minimal",
                 image_interpolation_method=cv2.INTER_CUBIC,
             ),
-            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]) if model_type=="large" or model_type=="small" else
-            NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+            normalization,
             PrepareForNet(),
         ]
     )
 
     model.eval()
-    
-    if optimize==True:
-        # rand_example = torch.rand(1, 3, net_h, net_w)
-        # model(rand_example)
-        # traced_script_module = torch.jit.trace(model, rand_example)
-        # model = traced_script_module
-    
-        if device == torch.device("cuda"):
-            model = model.to(memory_format=torch.channels_last)  
-            model = model.half()
+
+    if optimize == True and device == torch.device("cuda"):
+        model = model.to(memory_format=torch.channels_last)
+        model = model.half()
 
     model.to(device)
 
@@ -83,11 +74,9 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
     os.makedirs(output_path, exist_ok=True)
 
     print("start processing")
-
     for ind, img_name in enumerate(img_names):
 
         print("  processing {} ({}/{})".format(img_name, ind + 1, num_images))
-
         # input
 
         img = utils.read_image(img_name)
@@ -96,9 +85,11 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
         # compute
         with torch.no_grad():
             sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
-            if optimize==True and device == torch.device("cuda"):
-                sample = sample.to(memory_format=torch.channels_last)  
+
+            if optimize == True and device == torch.device("cuda"):
+                sample = sample.to(memory_format=torch.channels_last)
                 sample = sample.half()
+
             prediction = model.forward(sample)
             prediction = (
                 torch.nn.functional.interpolate(
@@ -135,15 +126,14 @@ if __name__ == "__main__":
     )
 
     parser.add_argument('-m', '--model_weights', 
-        #default='model-f6b98070.pt',
         default=None,
-        help='path to the trained weights of model'
+        help='path to model weights'
     )
 
     # 'large', 'small', 'vit_large', 'vit_hybrid'
     parser.add_argument('-t', '--model_type', 
-        default='vit_hybrid',
-        help='model type: large or small'
+        default='dpt_hybrid',
+        help='model type'
     )
 
     parser.add_argument('--optimize', dest='optimize', action='store_true')
@@ -153,10 +143,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     default_models = {
-        'large': 'model-f6b98070.pt', 
-        'small': 'model-small-70d6b9c8.pt', 
-        'vit_large': 'vit_large-2f21e586.pt', 
-        'vit_hybrid': 'vit_hybrid-501f0c75.pt', 
+        "midas_v21": "weights/midas_v21-f6b98070.pt",
+        "dpt_large": "weights/dpt_large-midas-2f21e586.pt",
+        "dpt_hybrid": "weights/dpt_hybrid-midas-501f0c75.pt",
     }
 
     if args.model_weights is None:

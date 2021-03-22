@@ -49,6 +49,7 @@ class MidasNet(BaseModel):
         self.dropout_rate = 0.0
 
         self.groups = 1
+        self.expand = False
 
         self.bn = False
         if "batch_norm" in self.blocks and self.blocks["batch_norm"] == True:
@@ -70,27 +71,9 @@ class MidasNet(BaseModel):
         if ('shift' in self.blocks):
             self.shift = self.blocks['shift']
 
-        self.features1=features
-        self.features2=features
-        self.features3=features
-        self.features4=features
-
-        features1=features
-        features2=features
-        features3=features
-        features4=features
-        self.expand = False
-        if "expand" in self.blocks and self.blocks['expand'] == True:
-            self.expand = True
-            features1=features
-            features2=features*2
-            features3=features*4
-            features4=features*8
 
         self.pretrained, self.scratch = _make_encoder(self.backbone, features, use_pretrained, groups=self.groups, 
             expand=self.expand, exportable=exportable, hooks = self.hooks, use_readout=self.use_readout)
-
-        print(" features(1,2,3,4) = ", features1, features2, features3, features4)
 
         if "activation" not in self.blocks:
             blocks['activation'] = None
@@ -106,10 +89,10 @@ class MidasNet(BaseModel):
         else:
             self.scratch.activation = nn.Identity()
 
-        self.scratch.refinenet4 = FeatureFusionBlock_custom(features4, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet3 = FeatureFusionBlock_custom(features3, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet2 = FeatureFusionBlock_custom(features2, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet1 = FeatureFusionBlock_custom(features1, self.scratch.activation, deconv=False, bn=self.bn, align_corners=align_corners)
+        self.scratch.refinenet4 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
+        self.scratch.refinenet3 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
+        self.scratch.refinenet2 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
+        self.scratch.refinenet1 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, align_corners=align_corners)
 
         if self.monodepth == True:
             self.scratch.output_conv = nn.Sequential(

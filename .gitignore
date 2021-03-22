@@ -108,3 +108,4 @@ venv.bak/
 *.jpg
 *.jpeg
 *.pt
+.DS_Store
