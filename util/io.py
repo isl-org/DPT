@@ -6,6 +6,10 @@ import numpy as np
 import cv2
 import torch
 
+from PIL import Image
+
+
+from .pallete import get_mask_pallete
 
 def read_pfm(path):
     """Read pfm file.
@@ -191,25 +195,22 @@ def write_depth(path, depth, bits=1):
     return
 
 
-def write_segm_img(path, image, prediction, alpha=0.5):
+def write_segm_img(path, image, labels, palette="detail", alpha=0.5):
     """Write depth map to pfm and png file.
 
     Args:
-        img (str): source image
-        depth (array): depth
+        path (str): filepath without extension
+        image (array): input image
+        labels (array): labeling of the image
     """
 
-    prediction = np.stack(
-        ((prediction * 10) % 255, (prediction * 100) % 255, (prediction * 1000) % 255),
-        axis=-1,
-    )
+    mask = get_mask_pallete(labels, "ade20k")
 
-    rgb_removed_color = cv2.cvtColor(
-        cv2.cvtColor(image.astype("uint8"), cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR
-    )
+    img = Image.fromarray(np.uint8(255*image)).convert("RGBA")
+    seg = mask.convert("RGBA")
 
-    prediction = prediction * alpha + (1.0 - alpha) * rgb_removed_color
+    out = Image.blend(img, seg, alpha)
 
-    cv2.imwrite(path + ".png", prediction.astype("uint8"))
+    out.save(path + ".png")
 
     return

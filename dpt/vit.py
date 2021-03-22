@@ -162,6 +162,7 @@ def get_activation(name):
 
     return hook
 
+
 def get_readout_oper(vit_features, features, use_readout, start_index=1):
     if use_readout == "ignore":
         readout_oper = [Slice(start_index)] * len(features)
@@ -189,7 +190,6 @@ def _make_vit_b16_backbone(
     start_index=1,
 ):
     pretrained = nn.Module()
-    print(model)
 
     pretrained.model = model
     pretrained.model.blocks[hooks[0]].register_forward_hook(get_activation("1"))
@@ -351,7 +351,6 @@ def _make_vit_b_rn50_backbone(
     start_index=1,
 ):
     pretrained = nn.Module()
-    print(model)
 
     pretrained.model = model
 

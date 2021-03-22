@@ -3,17 +3,20 @@
 import os
 import glob
 import torch
-import utils
 import cv2
 import argparse
 
+import util.io
+
 from torchvision.transforms import Compose
+
 from dpt.models import DPTDepthModel
-from dpt.midas_net_custom import MidasNet_large
+from dpt.midas_net import MidasNet_large
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 
 
-def run(input_path, output_path, model_path, model_type="large", optimize=True):
+
+def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
     """Run MonoDepthNN to compute depth maps.
 
     Args:
@@ -30,26 +33,21 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
     net_w = net_h = 384
 
     # load network
-    if model_type == "dpt_large":
+    if model_type == "dpt_large": # DPT-Large
         model = DPTDepthModel(
-            model_path,
+            path=model_path,
             backbone="vitl16_384",
-            blocks={
-                "hooks": [5, 11, 17, 23],
-                "use_readout": "project",
-                "activation": "relu",
-            },
             non_negative=True,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    elif model_type == "dpt_hybrid":
+    elif model_type == "dpt_hybrid": #DPT-Hybrid
         model = DPTDepthModel(
             path=model_path,
             backbone="vitb_rn50_384",
             non_negative=True,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    elif model_type == "midas_v21":
+    elif model_type == "midas_v21":  # Convolutional model
         model = MidasNet_large(model_path, non_negative=True)
         normalization = NormalizeImage(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -96,7 +94,7 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
         print("  processing {} ({}/{})".format(img_name, ind + 1, num_images))
         # input
 
-        img = utils.read_image(img_name)
+        img = util.io.read_image(img_name)
         img_input = transform({"image": img})["image"]
 
         # compute
@@ -124,7 +122,7 @@ def run(input_path, output_path, model_path, model_type="large", optimize=True):
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
         )
-        utils.write_depth(filename, prediction, bits=2)
+        util.io.write_depth(filename, prediction, bits=2)
 
     print("finished")
 
@@ -137,7 +135,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-o", "--output_path", default="output", help="folder for output images"
+        "-o", "--output_path", default="output_monodepth", help="folder for output images"
     )
 
     parser.add_argument(

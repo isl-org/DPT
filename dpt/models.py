@@ -12,23 +12,31 @@ from .blocks import (
 )
 
 
+def _make_fusion_block(features, use_bn):
+    return FeatureFusionBlock_custom(
+        features,
+        nn.ReLU(False),
+        deconv=False,
+        bn=use_bn,
+        expand=False,
+        align_corners=True,
+    )
+
+
 class DPT(BaseModel):
     def __init__(
-            self,
-            head,
-            path=None,
-            features=256,
-            backbone="vitb_rn50_384",
-            readout="project",
-            channels_last=False,
-            use_bn=False):
+        self,
+        head,
+        features=256,
+        backbone="vitb_rn50_384",
+        readout="project",
+        channels_last=False,
+        use_bn=False,
+    ):
 
         super(DPT, self).__init__()
 
-        use_pretrained = False if path else True
-
         self.channels_last = channels_last
-
 
         hooks = {
             "vitb_rn50_384": [0, 1, 8, 11],
@@ -40,7 +48,7 @@ class DPT(BaseModel):
         self.pretrained, self.scratch = _make_encoder(
             backbone,
             features,
-            use_pretrained,
+            False, # Set to true of you want to train from scratch, uses ImageNet weights
             groups=1,
             expand=False,
             exportable=False,
@@ -48,46 +56,12 @@ class DPT(BaseModel):
             use_readout=readout,
         )
 
-        self.scratch.refinenet4 = FeatureFusionBlock_custom(
-            features,
-            nn.ReLU(False),
-            deconv=False,
-            bn=use_bn,
-            expand=False,
-            align_corners=True,
-        )
-
-        self.scratch.refinenet3 = FeatureFusionBlock_custom(
-            features,
-            nn.ReLU(False),
-            deconv=False,
-            bn=use_bn,
-            expand=False,
-            align_corners=True,
-        )
-
-        self.scratch.refinenet2 = FeatureFusionBlock_custom(
-            features,
-            nn.ReLU(False),
-            deconv=False,
-            bn=use_bn,
-            expand=False,
-            align_corners=True,
-        )
-
-        self.scratch.refinenet1 = FeatureFusionBlock_custom(
-            features,
-            nn.ReLU(False),
-            deconv=False,
-            bn=use_bn,
-            expand=False,
-            align_corners=True,
-        )
+        self.scratch.refinenet1 = _make_fusion_block(features, use_bn)
+        self.scratch.refinenet2 = _make_fusion_block(features, use_bn)
+        self.scratch.refinenet3 = _make_fusion_block(features, use_bn)
+        self.scratch.refinenet4 = _make_fusion_block(features, use_bn)
 
         self.scratch.output_conv = head
-
-        if path:
-            self.load(path)
 
 
     def forward(self, x):
@@ -112,51 +86,53 @@ class DPT(BaseModel):
 
 
 class DPTDepthModel(DPT):
-    def __init__(self, **kwargs):
+    def __init__(self, path=None, non_negative=True, **kwargs):
         features = kwargs["features"] if "features" in kwargs else 256
 
-        non_negative = kwargs["non_negative"]
-        del kwargs["non_negative"]
-
         head = nn.Sequential(
-                nn.Conv2d(
-                    features,
-                    features // 2,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,
-                ),
-                Interpolate(scale_factor=2, mode="bilinear"),
-                nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1),
-                nn.ReLU(True),
-                nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0),
-                nn.ReLU(True) if non_negative else nn.Identity(),
-                nn.Identity(),
-            )
+            nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1),
+            Interpolate(scale_factor=2, mode="bilinear"),
+            nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(True),
+            nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0),
+            nn.ReLU(True) if non_negative else nn.Identity(),
+            nn.Identity(),
+        )
 
         super().__init__(head, **kwargs)
+
+        if path is not None:
+           self.load(path)
 
     def forward(self, x):
         return super().forward(x).squeeze(dim=1)
 
 
 class DPTSegmentationModel(DPT):
-    def __init__(self, num_classes, **kwargs):
+    def __init__(self, num_classes, path=None, **kwargs):
 
-       features = kwargs["features"] if "features" in kwargs else 256
+        features = kwargs["features"] if "features" in kwargs else 256
 
-       num_classes = kwargs["num_classes"]
-       del kwargs["num_classes"]
+        kwargs["use_bn"] = True
 
-       head = nn.Sequential(
-                    nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
-                    nn.BatchNorm2d(features),
-                    nn.ReLU(True),
-                    nn.Dropout(0.1, False),
-                    nn.Conv2d(features, num_classes, kernel_size=1),
-                    Interpolate(
-                        scale_factor=2, mode="bilinear", align_corners=True
-                    ),
-                )
+        head = nn.Sequential(
+            nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(features),
+            nn.ReLU(True),
+            nn.Dropout(0.1, False),
+            nn.Conv2d(features, num_classes, kernel_size=1),
+            Interpolate(scale_factor=2, mode="bilinear", align_corners=True),
+        )
 
-       super().__init__(head, **kwargs)
+        super().__init__(head, **kwargs)
+
+        self.auxlayer = nn.Sequential(
+                nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
+                nn.BatchNorm2d(features),
+                nn.ReLU(True),
+                nn.Dropout(0.1, False),
+                nn.Conv2d(features, num_classes, kernel_size=1),
+            )
+
+        if path is not None:
+           self.load(path)
