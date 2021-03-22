@@ -163,6 +163,7 @@ def resize_depth(depth, width, height):
 
     return depth_resized
 
+
 def write_depth(path, depth, bits=1):
     """Write depth map to pfm and png file.
 
@@ -175,7 +176,7 @@ def write_depth(path, depth, bits=1):
     depth_min = depth.min()
     depth_max = depth.max()
 
-    max_val = (2**(8*bits))-1
+    max_val = (2 ** (8 * bits)) - 1
 
     if depth_max - depth_min > np.finfo("float").eps:
         out = max_val * (depth - depth_min) / (depth_max - depth_min)
@@ -198,11 +199,16 @@ def write_segm_img(path, image, prediction, alpha=0.5):
         depth (array): depth
     """
 
-    prediction = np.stack(((prediction*10) % 255, (prediction*100) % 255 , (prediction*1000) % 255), axis=-1)
+    prediction = np.stack(
+        ((prediction * 10) % 255, (prediction * 100) % 255, (prediction * 1000) % 255),
+        axis=-1,
+    )
 
-    rgb_removed_color = cv2.cvtColor(cv2.cvtColor(image.astype("uint8"), cv2.COLOR_BGR2GRAY ) , cv2.COLOR_GRAY2BGR )
+    rgb_removed_color = cv2.cvtColor(
+        cv2.cvtColor(image.astype("uint8"), cv2.COLOR_BGR2GRAY), cv2.COLOR_GRAY2BGR
+    )
 
-    prediction = prediction*alpha + (1.0-alpha)*rgb_removed_color
+    prediction = prediction * alpha + (1.0 - alpha) * rgb_removed_color
 
     cv2.imwrite(path + ".png", prediction.astype("uint8"))
 

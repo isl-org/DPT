@@ -7,27 +7,43 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .base_model import BaseModel
-from .blocks import FeatureFusionBlock, FeatureFusionBlock_custom, Interpolate, _make_encoder, forward_vit
-
+from .blocks import (
+    FeatureFusionBlock,
+    FeatureFusionBlock_custom,
+    Interpolate,
+    _make_encoder,
+    forward_vit,
+)
 
 
 class MidasNet(BaseModel):
     """Network for monocular depth estimation.
     """
 
-    def __init__(self, path=None, features=256, backbone="vitb_rn50_384", monodepth=True, num_classes=150, non_negative=True, exportable=False, channels_last=False, align_corners=True,
+    def __init__(
+        self,
+        path=None,
+        features=256,
+        backbone="vitb_rn50_384",
+        monodepth=True,
+        num_classes=150,
+        non_negative=True,
+        exportable=False,
+        channels_last=False,
+        align_corners=True,
         blocks={
-            'activation': 'relu', 
-            'batch_norm': False,
-            'freeze_bn': True,
-            'expand': False,
-            'hooks': [0, 1, 8, 11],
-            'use_readout': 'project',
+            "activation": "relu",
+            "batch_norm": False,
+            "freeze_bn": True,
+            "expand": False,
+            "hooks": [0, 1, 8, 11],
+            "use_readout": "project",
             "aux": None,
             "widehead": False,
-            'scale': 1.0,
-            'shift': 0.0,
-            }):
+            "scale": 1.0,
+            "shift": 0.0,
+        },
+    ):
         """Init.
 
         Args:
@@ -40,7 +56,7 @@ class MidasNet(BaseModel):
         super(MidasNet, self).__init__()
 
         use_pretrained = False if path else True
-                
+
         self.channels_last = channels_last
         self.blocks = blocks
         self.backbone = backbone
@@ -57,48 +73,89 @@ class MidasNet(BaseModel):
 
         self.hooks = None
         if "hooks" in self.blocks:
-            self.hooks = self.blocks['hooks']
+            self.hooks = self.blocks["hooks"]
 
-        self.use_readout="ignore"
+        self.use_readout = "ignore"
         if "use_readout" in self.blocks:
-            self.use_readout = self.blocks['use_readout']
-            
+            self.use_readout = self.blocks["use_readout"]
+
         self.scale = 1.0
-        if ('scale' in self.blocks):
-            self.scale = self.blocks['scale']
+        if "scale" in self.blocks:
+            self.scale = self.blocks["scale"]
 
         self.shift = 0.0
-        if ('shift' in self.blocks):
-            self.shift = self.blocks['shift']
+        if "shift" in self.blocks:
+            self.shift = self.blocks["shift"]
 
-
-        self.pretrained, self.scratch = _make_encoder(self.backbone, features, use_pretrained, groups=self.groups, 
-            expand=self.expand, exportable=exportable, hooks = self.hooks, use_readout=self.use_readout)
+        self.pretrained, self.scratch = _make_encoder(
+            self.backbone,
+            features,
+            use_pretrained,
+            groups=self.groups,
+            expand=self.expand,
+            exportable=exportable,
+            hooks=self.hooks,
+            use_readout=self.use_readout,
+        )
 
         if "activation" not in self.blocks:
-            blocks['activation'] = None
+            blocks["activation"] = None
 
-        if (blocks['activation'] == 'mish'):
+        if blocks["activation"] == "mish":
             self.scratch.activation = Mish()
-        elif (blocks['activation'] == 'hard_mish'):
+        elif blocks["activation"] == "hard_mish":
             self.scratch.activation = HardMish()
-        elif (blocks['activation'] == 'leaky'):
+        elif blocks["activation"] == "leaky":
             self.scratch.activation = nn.LeakyReLU(0.1)
-        elif (blocks['activation'] == 'relu'):
+        elif blocks["activation"] == "relu":
             self.scratch.activation = nn.ReLU(False)
         else:
             self.scratch.activation = nn.Identity()
 
-        self.scratch.refinenet4 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet3 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet2 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, expand=self.expand, align_corners=align_corners)
-        self.scratch.refinenet1 = FeatureFusionBlock_custom(features, self.scratch.activation, deconv=False, bn=self.bn, align_corners=align_corners)
+        self.scratch.refinenet4 = FeatureFusionBlock_custom(
+            features,
+            self.scratch.activation,
+            deconv=False,
+            bn=self.bn,
+            expand=self.expand,
+            align_corners=align_corners,
+        )
+        self.scratch.refinenet3 = FeatureFusionBlock_custom(
+            features,
+            self.scratch.activation,
+            deconv=False,
+            bn=self.bn,
+            expand=self.expand,
+            align_corners=align_corners,
+        )
+        self.scratch.refinenet2 = FeatureFusionBlock_custom(
+            features,
+            self.scratch.activation,
+            deconv=False,
+            bn=self.bn,
+            expand=self.expand,
+            align_corners=align_corners,
+        )
+        self.scratch.refinenet1 = FeatureFusionBlock_custom(
+            features,
+            self.scratch.activation,
+            deconv=False,
+            bn=self.bn,
+            align_corners=align_corners,
+        )
 
         if self.monodepth == True:
             self.scratch.output_conv = nn.Sequential(
-                nn.Conv2d(features, features//2, kernel_size=3, stride=1, padding=1, groups=self.groups),
+                nn.Conv2d(
+                    features,
+                    features // 2,
+                    kernel_size=3,
+                    stride=1,
+                    padding=1,
+                    groups=self.groups,
+                ),
                 Interpolate(scale_factor=2, mode="bilinear"),
-                nn.Conv2d(features//2, 32, kernel_size=3, stride=1, padding=1),
+                nn.Conv2d(features // 2, 32, kernel_size=3, stride=1, padding=1),
                 self.scratch.activation,
                 nn.Conv2d(32, 1, kernel_size=1, stride=1, padding=0),
                 nn.ReLU(True) if non_negative else nn.Identity(),
@@ -142,7 +199,11 @@ class MidasNet(BaseModel):
                     ),
                     nn.Dropout(self.dropout_rate, False),
                     nn.Conv2d(
-                        features // 2, self.num_classes, kernel_size=1, stride=1, padding=0
+                        features // 2,
+                        self.num_classes,
+                        kernel_size=1,
+                        stride=1,
+                        padding=0,
                     ),
                 )
 
@@ -154,12 +215,12 @@ class MidasNet(BaseModel):
                 nn.Dropout(self.dropout_rate, False),
                 nn.Conv2d(features2, self.num_classes, 1),
             )
-        
+
         if path:
             self.load(path)
 
         self.freeze_bn = True
-        if "freeze_bn" in self.blocks and self.blocks['freeze_bn'] == False:
+        if "freeze_bn" in self.blocks and self.blocks["freeze_bn"] == False:
             self.freeze_bn = False
 
         if self.freeze_bn == True:
@@ -169,7 +230,6 @@ class MidasNet(BaseModel):
                     if True:
                         m.weight.requires_grad = False
                         m.bias.requires_grad = False
-                        
 
     def forward(self, x):
         """Forward pass.
@@ -180,12 +240,12 @@ class MidasNet(BaseModel):
         Returns:
             tensor: depth
         """
-        if self.channels_last==True:
+        if self.channels_last == True:
             print("self.channels_last = ", self.channels_last)
             x.contiguous(memory_format=torch.channels_last)
 
-        if hasattr(self.pretrained, 'model'):
-            if hasattr(self.pretrained.model, 'patch_size'):
+        if hasattr(self.pretrained, "model"):
+            if hasattr(self.pretrained.model, "patch_size"):
                 # Use resizable ViT
                 layer_1, layer_2, layer_3, layer_4 = forward_vit(self.pretrained, x)
         else:
@@ -194,8 +254,7 @@ class MidasNet(BaseModel):
             layer_3 = self.pretrained.layer3(layer_2)
             layer_4 = self.pretrained.layer4(layer_3)
 
-
-        layer_1_rn = self.scratch.layer1_rn(layer_1)     
+        layer_1_rn = self.scratch.layer1_rn(layer_1)
         layer_2_rn = self.scratch.layer2_rn(layer_2)
         layer_3_rn = self.scratch.layer3_rn(layer_3)
         layer_4_rn = self.scratch.layer4_rn(layer_4)
@@ -210,17 +269,15 @@ class MidasNet(BaseModel):
         out = self.scratch.output_conv(path_1)
 
         out = out * self.scale + self.shift
-                
+
         if hasattr(self, "auxlayer"):
             auxout = self.auxlayer(path_2)
             auxout = F.interpolate(
                 auxout, size=tuple(out.shape[2:]), mode="bilinear", align_corners=True
             )
             return out, auxout
-        
+
         if self.monodepth == True:
             return torch.squeeze(out, dim=1)
         else:
             return out
-
-
