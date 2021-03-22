@@ -101,7 +101,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             prediction = torch.nn.functional.interpolate(
                 out, size=img.shape[:2], mode="bicubic", align_corners=False
             )
-            prediction = torch.argmax(prediction, dim=1)
+            prediction = torch.argmax(prediction, dim=1) + 1
             prediction = prediction.squeeze().cpu().numpy()
 
         # output
