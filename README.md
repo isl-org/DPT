@@ -2,8 +2,9 @@
 
 This repository contains code and models for our [paper](TODO):
 
->Vision Transformers for Dense Prediction
-René Ranftl, Alexey Bochkovskiy, Vladlen Koltun
+> Vision Transformers for Dense Prediction 
+
+> René Ranftl, Alexey Bochkovskiy, Vladlen Koltun
 
 
 ### Changelog 
