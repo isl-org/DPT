@@ -15,13 +15,13 @@ This repository contains code and models for our [paper](TODO):
 
 
 Monodepth:
-- [dpt_hybrid-midas-501f0c75.pt](TODO)
-- [dpt_large-midas-2f21e586.pt](TODO) 
+- [dpt_hybrid-midas-501f0c75.pt](TODO), [Mirror](TODO)
+- [dpt_large-midas-2f21e586.pt](TODO), [Mirror](TODO)
 
 
 Segmentation:
- - [dpt_hybrid-ade20k-53898607.pt](TODO)
- - [dpt_large-ade20k-XXXXXXXX.pt](TODO)
+ - [dpt_hybrid-ade20k-53898607.pt](TODO), [Mirror](TODO)
+ - [dpt_large-ade20k-b12dca68.pt](TODO), [Mirror](TODO)
   
 2) Set up dependencies: 
 
@@ -30,7 +30,7 @@ Segmentation:
     pip install timm
     ```
 
-   The code was tested with Python 3.7, PyTorch 1.8.0, OpenCV 4.5.1, timm 0.4.5
+   The code was tested with Python 3.7, PyTorch 1.8.0, OpenCV 4.5.1, and timm 0.4.5
 
     
 ### Usage 
@@ -51,7 +51,7 @@ Segmentation:
 
 3) The results are written to the folder `output_monodepth` and `output_segmentation`, respectively.
 
-You can use the flag `-t` to switch between different models. Possible options are `dpt_hybrid` (default) and `dpt_large`.
+Use the flag `-t` to switch between different models. Possible options are `dpt_hybrid` (default) and `dpt_large`.
 
 
 ### Citation
@@ -61,14 +61,14 @@ Please cite our paper if you use this code or any of the models:
 @article{Ranftl2021,
 	author    = {Ren\'{e} Ranftl and Alexey Bochkovskiy and Vladlen Koltun},
 	title     = {Vision Transformers for Dense Prediction},
-	journal   = {ArXiV Preprint},
+	journal   = {ArXiv preprint},
 	year      = {2021},
 }
 ```
 
 ### Acknowledgements
 
-Our work extensively builds on [timm](https://github.com/rwightman/pytorch-image-models) and [PyTorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding).
+Our work builds on [timm](https://github.com/rwightman/pytorch-image-models) and [PyTorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding). We'd like to thank the authors for making these libraries available.
 
 ### License 
 
