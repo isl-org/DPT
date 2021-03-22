@@ -15,13 +15,13 @@ This repository contains code and models for our [paper](TODO):
 
 
 Monodepth:
-- [dpt_hybrid-midas-501f0c75.pt](TODO), [Mirror](TODO)
-- [dpt_large-midas-2f21e586.pt](TODO), [Mirror](TODO)
+- [dpt_hybrid-midas-501f0c75.pt](https://github.com/intel-isl/DPT/releases/download/1_0/dpt_hybrid-midas-501f0c75.pt), [Mirror](TBD)
+- [dpt_large-midas-2f21e586.pt](https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt), [Mirror](TBD)
 
 
 Segmentation:
- - [dpt_hybrid-ade20k-53898607.pt](TODO), [Mirror](TODO)
- - [dpt_large-ade20k-b12dca68.pt](TODO), [Mirror](TODO)
+ - [dpt_hybrid-ade20k-53898607.pt](https://github.com/intel-isl/DPT/releases/download/1_0/dpt_hybrid-ade20k-53898607.pt), [Mirror](TBD)
+ - [dpt_large-ade20k-b12dca68.pt](https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-ade20k-b12dca68.pt), [Mirror](TBD)
   
 2) Set up dependencies: 
 
@@ -56,7 +56,7 @@ Use the flag `-t` to switch between different models. Possible options are `dpt_
 
 ### Citation
 
-Please cite our paper if you use this code or any of the models:
+Please cite our papers if you use this code or any of the models. 
 ```
 @article{Ranftl2021,
 	author    = {Ren\'{e} Ranftl and Alexey Bochkovskiy and Vladlen Koltun},
@@ -66,9 +66,18 @@ Please cite our paper if you use this code or any of the models:
 }
 ```
 
+```
+@article{Ranftl2020,
+	author    = {Ren\'{e} Ranftl and Katrin Lasinger and David Hafner and Konrad Schindler and Vladlen Koltun},
+	title     = {Towards Robust Monocular Depth Estimation: Mixing Datasets for Zero-shot Cross-dataset Transfer},
+	journal   = {IEEE Transactions on Pattern Analysis and Machine Intelligence (TPAMI)},
+	year      = {2020},
+}
+```
+
 ### Acknowledgements
 
-Our work builds on [timm](https://github.com/rwightman/pytorch-image-models) and [PyTorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding). We'd like to thank the authors for making these libraries available.
+Our work builds on and uses code from [timm](https://github.com/rwightman/pytorch-image-models) and [PyTorch-Encoding](https://github.com/zhanghang1989/PyTorch-Encoding). We'd like to thank the authors for making these libraries available.
 
 ### License 
 
