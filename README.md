@@ -26,10 +26,11 @@ Segmentation:
 2) Set up dependencies: 
 
     ```shell
-    conda install pytorch torchvision opencv
+    conda install pytorch torchvision opencv 
+    pip install timm
     ```
 
-   The code was tested with Python 3.7, PyTorch 1.8.0, and OpenCV 4.5.1.
+   The code was tested with Python 3.7, PyTorch 1.8.0, OpenCV 4.5.1, timm 0.4.5
 
     
 ### Usage 
