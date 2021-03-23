@@ -23,8 +23,10 @@ def _make_encoder(
 ):
     if backbone == "vitl16_384":
         pretrained = _make_pretrained_vitl16_384(
-            use_pretrained, hooks=hooks, use_readout=use_readout,
-            enable_attention_hooks=enable_attention_hooks
+            use_pretrained,
+            hooks=hooks,
+            use_readout=use_readout,
+            enable_attention_hooks=enable_attention_hooks,
         )
         scratch = _make_scratch(
             [256, 512, 1024, 1024], features, groups=groups, expand=expand
@@ -35,15 +37,17 @@ def _make_encoder(
             hooks=hooks,
             use_vit_only=use_vit_only,
             use_readout=use_readout,
-            enable_attention_hooks=enable_attention_hooks
+            enable_attention_hooks=enable_attention_hooks,
         )
         scratch = _make_scratch(
             [256, 512, 768, 768], features, groups=groups, expand=expand
         )  # ViT-H/16 - 85.0% Top1 (backbone)
     elif backbone == "vitb16_384":
         pretrained = _make_pretrained_vitb16_384(
-            use_pretrained, hooks=hooks, use_readout=use_readout,
-            enable_attention_hooks=enable_attention_hooks
+            use_pretrained,
+            hooks=hooks,
+            use_readout=use_readout,
+            enable_attention_hooks=enable_attention_hooks,
         )
         scratch = _make_scratch(
             [96, 192, 384, 768], features, groups=groups, expand=expand
@@ -132,8 +136,7 @@ def _make_pretrained_resnext101_wsl(use_pretrained):
 
 
 class Interpolate(nn.Module):
-    """Interpolation module.
-    """
+    """Interpolation module."""
 
     def __init__(self, scale_factor, mode, align_corners=False):
         """Init.
@@ -170,8 +173,7 @@ class Interpolate(nn.Module):
 
 
 class ResidualConvUnit(nn.Module):
-    """Residual convolution module.
-    """
+    """Residual convolution module."""
 
     def __init__(self, features):
         """Init.
@@ -209,8 +211,7 @@ class ResidualConvUnit(nn.Module):
 
 
 class FeatureFusionBlock(nn.Module):
-    """Feature fusion block.
-    """
+    """Feature fusion block."""
 
     def __init__(self, features):
         """Init.
@@ -244,8 +245,7 @@ class FeatureFusionBlock(nn.Module):
 
 
 class ResidualConvUnit_custom(nn.Module):
-    """Residual convolution module.
-    """
+    """Residual convolution module."""
 
     def __init__(self, features, activation, bn):
         """Init.
@@ -316,8 +316,7 @@ class ResidualConvUnit_custom(nn.Module):
 
 
 class FeatureFusionBlock_custom(nn.Module):
-    """Feature fusion block.
-    """
+    """Feature fusion block."""
 
     def __init__(
         self,

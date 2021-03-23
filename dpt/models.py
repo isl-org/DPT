@@ -49,7 +49,7 @@ class DPT(BaseModel):
         self.pretrained, self.scratch = _make_encoder(
             backbone,
             features,
-            False, # Set to true of you want to train from scratch, uses ImageNet weights
+            False,  # Set to true of you want to train from scratch, uses ImageNet weights
             groups=1,
             expand=False,
             exportable=False,
@@ -64,7 +64,6 @@ class DPT(BaseModel):
         self.scratch.refinenet4 = _make_fusion_block(features, use_bn)
 
         self.scratch.output_conv = head
-
 
     def forward(self, x):
         if self.channels_last == True:
@@ -104,7 +103,7 @@ class DPTDepthModel(DPT):
         super().__init__(head, **kwargs)
 
         if path is not None:
-           self.load(path)
+            self.load(path)
 
     def forward(self, x):
         return super().forward(x).squeeze(dim=1)
@@ -129,12 +128,12 @@ class DPTSegmentationModel(DPT):
         super().__init__(head, **kwargs)
 
         self.auxlayer = nn.Sequential(
-                nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
-                nn.BatchNorm2d(features),
-                nn.ReLU(True),
-                nn.Dropout(0.1, False),
-                nn.Conv2d(features, num_classes, kernel_size=1),
-            )
+            nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
+            nn.BatchNorm2d(features),
+            nn.ReLU(True),
+            nn.Dropout(0.1, False),
+            nn.Conv2d(features, num_classes, kernel_size=1),
+        )
 
         if path is not None:
-           self.load(path)
+            self.load(path)

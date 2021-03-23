@@ -16,6 +16,7 @@ from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 
 from util.misc import visualize_attention
 
+
 def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
     """Run MonoDepthNN to compute depth maps.
 
@@ -33,20 +34,20 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     net_w = net_h = 384
 
     # load network
-    if model_type == "dpt_large": # DPT-Large
+    if model_type == "dpt_large":  # DPT-Large
         model = DPTDepthModel(
             path=model_path,
             backbone="vitl16_384",
             non_negative=True,
-            enable_attention_hooks=args.vis
+            enable_attention_hooks=args.vis,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-    elif model_type == "dpt_hybrid": #DPT-Hybrid
+    elif model_type == "dpt_hybrid":  # DPT-Hybrid
         model = DPTDepthModel(
             path=model_path,
             backbone="vitb_rn50_384",
             non_negative=True,
-            enable_attention_hooks=args.vis
+            enable_attention_hooks=args.vis,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "midas_v21":  # Convolutional model
@@ -122,7 +123,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
 
             if args.vis:
                 visualize_attention(sample, model, prediction, args.model_type)
-#                exit()
+        #                exit()
 
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
@@ -140,18 +141,24 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-o", "--output_path", default="output_monodepth", help="folder for output images"
+        "-o",
+        "--output_path",
+        default="output_monodepth",
+        help="folder for output images",
     )
 
     parser.add_argument(
         "-m", "--model_weights", default=None, help="path to model weights"
     )
 
-    parser.add_argument(
-        "--show-attention", dest="vis", action="store_true"
-    )
+    parser.add_argument("--show-attention", dest="vis", action="store_true")
 
-    parser.add_argument("-t", "--model_type", default="dpt_hybrid", help="model type [dpt_large|dpt_hybrid|midas_v21]")
+    parser.add_argument(
+        "-t",
+        "--model_type",
+        default="dpt_hybrid",
+        help="model type [dpt_large|dpt_hybrid|midas_v21]",
+    )
 
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")

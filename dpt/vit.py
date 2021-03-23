@@ -7,6 +7,8 @@ import torch.nn.functional as F
 
 
 activations = {}
+
+
 def get_activation(name):
     def hook(model, input, output):
         activations[name] = output
@@ -15,29 +17,36 @@ def get_activation(name):
 
 
 attention = {}
+
+
 def get_attention(name):
     def hook(module, input, output):
         x = input[0]
         B, N, C = x.shape
-        qkv = module.qkv(x).reshape(B, N, 3, module.num_heads, C // module.num_heads).permute(2, 0, 3, 1, 4)
-        q, k, v = qkv[0], qkv[1], qkv[2]   # make torchscript happy (cannot use tensor as tuple)
+        qkv = (
+            module.qkv(x)
+            .reshape(B, N, 3, module.num_heads, C // module.num_heads)
+            .permute(2, 0, 3, 1, 4)
+        )
+        q, k, v = (
+            qkv[0],
+            qkv[1],
+            qkv[2],
+        )  # make torchscript happy (cannot use tensor as tuple)
 
         attn = (q @ k.transpose(-2, -1)) * module.scale
 
-        attn = attn.softmax(dim=-1)#[:,:,1,1:]
+        attn = attn.softmax(dim=-1)  # [:,:,1,1:]
         attention[name] = attn
 
     return hook
 
 
 def get_mean_attention_map(attn, token, shape):
-    attn = attn[:,:,token,1:]
+    attn = attn[:, :, token, 1:]
     attn = attn.unflatten(2, torch.Size([shape[2] // 16, shape[3] // 16])).float()
     attn = torch.nn.functional.interpolate(
-        attn,
-        size=shape[2:],
-        mode="bicubic",
-        align_corners=False
+        attn, size=shape[2:], mode="bicubic", align_corners=False
     ).squeeze(0)
 
     all_attn = torch.mean(attn, 0)
@@ -192,8 +201,6 @@ def forward_flex(self, x):
     return x
 
 
-
-
 def get_readout_oper(vit_features, features, use_readout, start_index=1):
     if use_readout == "ignore":
         readout_oper = [Slice(start_index)] * len(features)
@@ -231,15 +238,20 @@ def _make_vit_b16_backbone(
 
     pretrained.activations = activations
 
-
     if enable_attention_hooks:
-        pretrained.model.blocks[hooks[0]].attn.register_forward_hook(get_attention("attn_1"))
-        pretrained.model.blocks[hooks[1]].attn.register_forward_hook(get_attention("attn_2"))
-        pretrained.model.blocks[hooks[2]].attn.register_forward_hook(get_attention("attn_3"))
-        pretrained.model.blocks[hooks[3]].attn.register_forward_hook(get_attention("attn_4"))
+        pretrained.model.blocks[hooks[0]].attn.register_forward_hook(
+            get_attention("attn_1")
+        )
+        pretrained.model.blocks[hooks[1]].attn.register_forward_hook(
+            get_attention("attn_2")
+        )
+        pretrained.model.blocks[hooks[2]].attn.register_forward_hook(
+            get_attention("attn_3")
+        )
+        pretrained.model.blocks[hooks[3]].attn.register_forward_hook(
+            get_attention("attn_4")
+        )
         pretrained.attention = attention
-
-
 
     readout_oper = get_readout_oper(vit_features, features, use_readout, start_index)
 
@@ -336,60 +348,6 @@ def _make_vit_b16_backbone(
     return pretrained
 
 
-def _make_pretrained_vitl16_384(pretrained, use_readout="ignore", hooks=None,
-                                enable_attention_hooks=False):
-    model = timm.create_model("vit_large_patch16_384", pretrained=pretrained)
-
-    hooks = [5, 11, 17, 23] if hooks == None else hooks
-    return _make_vit_b16_backbone(
-        model,
-        features=[256, 512, 1024, 1024],
-        hooks=hooks,
-        vit_features=1024,
-        use_readout=use_readout,
-        enable_attention_hooks=enable_attention_hooks,
-    )
-
-
-def _make_pretrained_vitb16_384(pretrained, use_readout="ignore", hooks=None,
-                                enable_attention_hooks=False):
-    model = timm.create_model("vit_base_patch16_384", pretrained=pretrained)
-
-    hooks = [2, 5, 8, 11] if hooks == None else hooks
-    return _make_vit_b16_backbone(
-        model, features=[96, 192, 384, 768], hooks=hooks, use_readout=use_readout,
-        enable_attention_hooks=enable_attention_hooks
-    )
-
-
-def _make_pretrained_deitb16_384(pretrained, use_readout="ignore", hooks=None,
-                                 enable_attention_hooks=False):
-    model = timm.create_model("vit_deit_base_patch16_384", pretrained=pretrained)
-
-    hooks = [2, 5, 8, 11] if hooks == None else hooks
-    return _make_vit_b16_backbone(
-        model, features=[96, 192, 384, 768], hooks=hooks, use_readout=use_readout,
-        enable_attention_hooks=enable_attention_hooks
-    )
-
-
-def _make_pretrained_deitb16_distil_384(pretrained, use_readout="ignore", hooks=None,
-                                        enable_attention_hooks=False):
-    model = timm.create_model(
-        "vit_deit_base_distilled_patch16_384", pretrained=pretrained
-    )
-
-    hooks = [2, 5, 8, 11] if hooks == None else hooks
-    return _make_vit_b16_backbone(
-        model,
-        features=[96, 192, 384, 768],
-        hooks=hooks,
-        use_readout=use_readout,
-        start_index=2,
-        enable_attention_hooks=enable_attention_hooks
-    )
-
-
 def _make_vit_b_rn50_backbone(
     model,
     features=[256, 512, 768, 768],
@@ -399,7 +357,7 @@ def _make_vit_b_rn50_backbone(
     use_vit_only=False,
     use_readout="ignore",
     start_index=1,
-    enable_attention_hooks=False
+    enable_attention_hooks=False,
 ):
     pretrained = nn.Module()
 
@@ -534,8 +492,11 @@ def _make_vit_b_rn50_backbone(
 
 
 def _make_pretrained_vitb_rn50_384(
-        pretrained, use_readout="ignore", hooks=None, use_vit_only=False,
-        enable_attention_hooks=False
+    pretrained,
+    use_readout="ignore",
+    hooks=None,
+    use_vit_only=False,
+    enable_attention_hooks=False,
 ):
     model = timm.create_model("vit_base_resnet50_384", pretrained=pretrained)
 
@@ -547,5 +508,69 @@ def _make_pretrained_vitb_rn50_384(
         hooks=hooks,
         use_vit_only=use_vit_only,
         use_readout=use_readout,
-        enable_attention_hooks=enable_attention_hooks
+        enable_attention_hooks=enable_attention_hooks,
+    )
+
+
+def _make_pretrained_vitl16_384(
+    pretrained, use_readout="ignore", hooks=None, enable_attention_hooks=False
+):
+    model = timm.create_model("vit_large_patch16_384", pretrained=pretrained)
+
+    hooks = [5, 11, 17, 23] if hooks == None else hooks
+    return _make_vit_b16_backbone(
+        model,
+        features=[256, 512, 1024, 1024],
+        hooks=hooks,
+        vit_features=1024,
+        use_readout=use_readout,
+        enable_attention_hooks=enable_attention_hooks,
+    )
+
+
+def _make_pretrained_vitb16_384(
+    pretrained, use_readout="ignore", hooks=None, enable_attention_hooks=False
+):
+    model = timm.create_model("vit_base_patch16_384", pretrained=pretrained)
+
+    hooks = [2, 5, 8, 11] if hooks == None else hooks
+    return _make_vit_b16_backbone(
+        model,
+        features=[96, 192, 384, 768],
+        hooks=hooks,
+        use_readout=use_readout,
+        enable_attention_hooks=enable_attention_hooks,
+    )
+
+
+def _make_pretrained_deitb16_384(
+    pretrained, use_readout="ignore", hooks=None, enable_attention_hooks=False
+):
+    model = timm.create_model("vit_deit_base_patch16_384", pretrained=pretrained)
+
+    hooks = [2, 5, 8, 11] if hooks == None else hooks
+    return _make_vit_b16_backbone(
+        model,
+        features=[96, 192, 384, 768],
+        hooks=hooks,
+        use_readout=use_readout,
+        enable_attention_hooks=enable_attention_hooks,
+    )
+
+
+def _make_pretrained_deitb16_distil_384(
+    pretrained, use_readout="ignore", hooks=None, enable_attention_hooks=False
+):
+    model = timm.create_model(
+        "vit_deit_base_distilled_patch16_384", pretrained=pretrained
+    )
+
+    hooks = [2, 5, 8, 11] if hooks == None else hooks
+    return _make_vit_b16_backbone(
+        model,
+        features=[96, 192, 384, 768],
+        hooks=hooks,
+        use_readout=use_readout,
+        start_index=2,
+        enable_attention_hooks=enable_attention_hooks,
     )

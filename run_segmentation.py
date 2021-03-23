@@ -45,7 +45,9 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             backbone="vitb_rn50_384",
         )
     else:
-        assert False, f"model_type '{model_type}' not implemented, use: --model_type [dpt_large|dpt_hybrid]"
+        assert (
+            False
+        ), f"model_type '{model_type}' not implemented, use: --model_type [dpt_large|dpt_hybrid]"
 
     transform = Compose(
         [
@@ -66,8 +68,8 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     model.eval()
 
     if optimize == True and device == torch.device("cuda"):
-            model = model.to(memory_format=torch.channels_last)
-            model = model.half()
+        model = model.to(memory_format=torch.channels_last)
+        model = model.half()
 
     model.to(device)
 
@@ -131,9 +133,7 @@ if __name__ == "__main__":
     )
 
     # 'vit_large', 'vit_hybrid'
-    parser.add_argument(
-        "-t", "--model_type", default="dpt_hybrid", help="model type"
-    )
+    parser.add_argument("-t", "--model_type", default="dpt_hybrid", help="model type")
 
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")

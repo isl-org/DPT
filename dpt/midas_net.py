@@ -10,8 +10,7 @@ from .blocks import FeatureFusionBlock, Interpolate, _make_encoder
 
 
 class MidasNet_large(BaseModel):
-    """Network for monocular depth estimation.
-    """
+    """Network for monocular depth estimation."""
 
     def __init__(self, path=None, features=256, non_negative=True):
         """Init.
