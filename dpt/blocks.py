@@ -19,10 +19,12 @@ def _make_encoder(
     hooks=None,
     use_vit_only=False,
     use_readout="ignore",
+    enable_attention_hooks=False,
 ):
     if backbone == "vitl16_384":
         pretrained = _make_pretrained_vitl16_384(
-            use_pretrained, hooks=hooks, use_readout=use_readout
+            use_pretrained, hooks=hooks, use_readout=use_readout,
+            enable_attention_hooks=enable_attention_hooks
         )
         scratch = _make_scratch(
             [256, 512, 1024, 1024], features, groups=groups, expand=expand
@@ -33,13 +35,15 @@ def _make_encoder(
             hooks=hooks,
             use_vit_only=use_vit_only,
             use_readout=use_readout,
+            enable_attention_hooks=enable_attention_hooks
         )
         scratch = _make_scratch(
             [256, 512, 768, 768], features, groups=groups, expand=expand
         )  # ViT-H/16 - 85.0% Top1 (backbone)
     elif backbone == "vitb16_384":
         pretrained = _make_pretrained_vitb16_384(
-            use_pretrained, hooks=hooks, use_readout=use_readout
+            use_pretrained, hooks=hooks, use_readout=use_readout,
+            enable_attention_hooks=enable_attention_hooks
         )
         scratch = _make_scratch(
             [96, 192, 384, 768], features, groups=groups, expand=expand

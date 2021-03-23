@@ -14,7 +14,7 @@ from dpt.models import DPTDepthModel
 from dpt.midas_net import MidasNet_large
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 
-
+from util.misc import visualize_attention
 
 def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
     """Run MonoDepthNN to compute depth maps.
@@ -38,6 +38,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             path=model_path,
             backbone="vitl16_384",
             non_negative=True,
+            enable_attention_hooks=args.vis
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "dpt_hybrid": #DPT-Hybrid
@@ -45,6 +46,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             path=model_path,
             backbone="vitb_rn50_384",
             non_negative=True,
+            enable_attention_hooks=args.vis
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "midas_v21":  # Convolutional model
@@ -118,7 +120,10 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 .numpy()
             )
 
-        # output
+            if args.vis:
+                visualize_attention(sample, model, prediction, args.model_type)
+#                exit()
+
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
         )
@@ -142,8 +147,11 @@ if __name__ == "__main__":
         "-m", "--model_weights", default=None, help="path to model weights"
     )
 
-    # 'large', 'small', 'vit_large', 'vit_hybrid'
-    parser.add_argument("-t", "--model_type", default="dpt_hybrid", help="model type")
+    parser.add_argument(
+        "--show-attention", dest="vis", action="store_true"
+    )
+
+    parser.add_argument("-t", "--model_type", default="dpt_hybrid", help="model type [dpt_large|dpt_hybrid|midas_v21]")
 
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
