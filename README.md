@@ -1,6 +1,6 @@
 ## Vision Transformers for Dense Prediction
 
-This repository contains code and models for our [paper](TODO):
+This repository contains code and models for our [paper](https://github.com/intel-isl/DPT/releases/download/1_0/dpt.pdf):
 
 > Vision Transformers for Dense Prediction  
 > René Ranftl, Alexey Bochkovskiy, Vladlen Koltun
