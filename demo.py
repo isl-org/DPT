@@ -28,6 +28,10 @@ def process(img, inference_type):
     run_cmd("rm -rf " + OUTPUT_DIR)
     run_cmd("mkdir " + INPUT_DIR)
     run_cmd("mkdir " + OUTPUT_DIR)
+    basewidth = 512
+    wpercent = (basewidth/float(img.size[0]))
+    hsize = int((float(img.size[1])*float(wpercent)))
+    img = img.resize((basewidth,hsize), Image.ANTIALIAS)
     img.save(INPUT_DIR + "1.jpg", "JPEG")
     opts = SimpleNamespace(input_folder=INPUT_DIR, output_folder=OUTPUT_DIR)
     opts.input_folder = os.path.abspath(opts.input_folder)
