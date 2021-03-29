@@ -39,7 +39,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             path=model_path,
             backbone="vitl16_384",
             non_negative=True,
-            enable_attention_hooks=args.vis,
+            enable_attention_hooks=False, #args.vis,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "dpt_hybrid":  # DPT-Hybrid
@@ -47,7 +47,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             path=model_path,
             backbone="vitb_rn50_384",
             non_negative=True,
-            enable_attention_hooks=args.vis,
+            enable_attention_hooks=False, #args.vis,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "midas_v21":  # Convolutional model
@@ -121,7 +121,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 .numpy()
             )
 
-            if args.vis:
+            if False: #args.vis:
                 visualize_attention(sample, model, prediction, args.model_type)
         #                exit()
 
