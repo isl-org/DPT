@@ -17,7 +17,10 @@ def run_cmd(command):
         print("Process interrupted")
         sys.exit(1)
 
-def monodepth(img, inference_type):
+run_cmd("wget https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt -O weights/dpt_large-midas-2f21e586.pt")
+run_cmd("wget https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-ade20k-b12dca68.pt -O weights/dpt_large-ade20k-b12dca68.pt")
+
+def process(img, inference_type):
     _id = randint(1, 10000)
     INPUT_DIR = "/tmp/input_image" + str(_id) + "/"
     OUTPUT_DIR = "/tmp/output_image" + str(_id) + "/"
@@ -36,10 +39,17 @@ def monodepth(img, inference_type):
 
     return os.path.join(OUTPUT_DIR, "1.png")
 
-iface = gr.Interface(
-    monodepth, 
+title = "DPT"
+description = "demo for Dense Prediction Transformers. To use it, simply upload your image, or click one of the examples to load them and select one of the options for monodepth or segmentation. Read more at the links below."
+article = "<p style='text-align: center'><a href='https://arxiv.org/abs/2103.13413'>Vision Transformers for Dense Prediction</a> | <a href='https://github.com/intel-isl/DPT'>Github Repo</a></p>"
+
+examples = [
+    ["elephant.jpg"],
+    ["kangaroo.jpg"]
+]
+
+gr.Interface(
+    process, 
     [gr.inputs.Image(type="pil"), gr.inputs.Radio(["monodepth", "segmentation"], type="value", label="Inference type")], 
-    "image",
-   )
-iface.launch(debug=True)
+    "image", title=title, description=description, examples=examples, article=article).launch(debug=True)
 
