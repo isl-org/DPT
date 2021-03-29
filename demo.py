@@ -45,7 +45,7 @@ def process(img, inference_type):
     return os.path.join(OUTPUT_DIR, "1.png")
 
 title = "DPT"
-description = "demo for Dense Prediction Transformers. To use it, simply upload your image, or click one of the examples to load them and select one of the options for monodepth or segmentation. Read more at the links below."
+description = "demo for Dense Prediction Transformers for dense prediction tasks using vision transformers. To use it, simply upload your image, or click one of the examples to load them and select one of the options for monodepth or segmentation. Read more at the links below."
 article = "<p style='text-align: center'><a href='https://arxiv.org/abs/2103.13413'>Vision Transformers for Dense Prediction</a> | <a href='https://github.com/intel-isl/DPT'>Github Repo</a></p>"
 
 examples = [
