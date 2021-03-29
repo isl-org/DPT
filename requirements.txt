@@ -6,3 +6,4 @@ torchvision
 pycrypto
 timm
 opencv-python
+Pillow

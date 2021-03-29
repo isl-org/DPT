@@ -8,6 +8,7 @@ from random import randint
 import gradio as gr
 import run_segmentation
 import run_monodepth
+from PIL import Image
 
 def run_cmd(command):
     try:
