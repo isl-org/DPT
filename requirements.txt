@@ -1,0 +1,8 @@
+ftfy
+regex
+tqdm
+torch
+torchvision
+pycrypto
+timm
+opencv-python
