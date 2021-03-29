@@ -17,8 +17,8 @@ def run_cmd(command):
         print("Process interrupted")
         sys.exit(1)
 
-run_cmd("wget https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt -O weights/dpt_large-midas-2f21e586.pt")
-run_cmd("wget https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-ade20k-b12dca68.pt -O weights/dpt_large-ade20k-b12dca68.pt")
+run_cmd("wget --continue https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-midas-2f21e586.pt -O weights/dpt_large-midas-2f21e586.pt")
+run_cmd("wget --continue https://github.com/intel-isl/DPT/releases/download/1_0/dpt_large-ade20k-b12dca68.pt -O weights/dpt_large-ade20k-b12dca68.pt")
 
 def process(img, inference_type):
     _id = randint(1, 10000)
