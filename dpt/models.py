@@ -87,8 +87,14 @@ class DPT(BaseModel):
 
 
 class DPTDepthModel(DPT):
-    def __init__(self, path=None, non_negative=True, **kwargs):
+    def __init__(
+        self, path=None, non_negative=True, scale=1.0, shift=0.0, invert=False, **kwargs
+    ):
         features = kwargs["features"] if "features" in kwargs else 256
+
+        self.scale = scale
+        self.shift = shift
+        self.invert = invert
 
         head = nn.Sequential(
             nn.Conv2d(features, features // 2, kernel_size=3, stride=1, padding=1),
@@ -106,7 +112,15 @@ class DPTDepthModel(DPT):
             self.load(path)
 
     def forward(self, x):
-        return super().forward(x).squeeze(dim=1)
+        inv_depth = super().forward(x).squeeze(dim=1)
+
+        if self.invert:
+            depth = self.scale * inv_depth + self.shift
+            depth[depth < 1e-8] = 1e-8
+            depth = 1.0 / depth
+            return depth
+        else:
+            return inv_depth
 
 
 class DPTSegmentationModel(DPT):

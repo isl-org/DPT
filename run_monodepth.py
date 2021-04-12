@@ -31,10 +31,9 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("device: %s" % device)
 
-    net_w = net_h = 384
-
     # load network
     if model_type == "dpt_large":  # DPT-Large
+        net_w = net_h = 384
         model = DPTDepthModel(
             path=model_path,
             backbone="vitl16_384",
@@ -43,6 +42,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "dpt_hybrid":  # DPT-Hybrid
+        net_w = net_h = 384
         model = DPTDepthModel(
             path=model_path,
             backbone="vitb_rn50_384",
@@ -50,7 +50,39 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             enable_attention_hooks=args.vis,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    elif model_type == "dpt_hybrid_kitti":
+        net_w = 1216
+        net_h = 352
+
+        model = DPTDepthModel(
+            path=model_path,
+            scale=0.00006016,
+            shift=0.00579,
+            invert=True,
+            backbone="vitb_rn50_384",
+            non_negative=True,
+            enable_attention_hooks=args.vis,
+        )
+
+        normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    elif model_type == "dpt_hybrid_nyu":
+        net_w = 640
+        net_h = 480
+
+        model = DPTDepthModel(
+            path=model_path,
+            scale=0.000305,
+            shift=0.1378,
+            invert=True,
+            backbone="vitb_rn50_384",
+            non_negative=True,
+            enable_attention_hooks=args.vis,
+        )
+
+        normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "midas_v21":  # Convolutional model
+        net_w = net_h = 384
+
         model = MidasNet_large(model_path, non_negative=True)
         normalization = NormalizeImage(
             mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
@@ -58,7 +90,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     else:
         assert (
             False
-        ), f"model_type '{model_type}' not implemented, use: --model_type [dpt_large|dpt_hybrid|midas_v21]"
+        ), f"model_type '{model_type}' not implemented, use: --model_type [dpt_large|dpt_hybrid|dpt_hybrid_kitti|dpt_hybrid_nyu|midas_v21]"
 
     transform = Compose(
         [
@@ -93,11 +125,20 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
 
     print("start processing")
     for ind, img_name in enumerate(img_names):
+        if os.path.isdir(img_name):
+            continue
 
         print("  processing {} ({}/{})".format(img_name, ind + 1, num_images))
         # input
 
         img = util.io.read_image(img_name)
+
+        if args.kitti_crop is True:
+            height, width, _ = img.shape
+            top = height - 352
+            left = (width - 1216) // 2
+            img = img[top : top + 352, left : left + 1216, :]
+
         img_input = transform({"image": img})["image"]
 
         # compute
@@ -121,9 +162,14 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
                 .numpy()
             )
 
+            if model_type == "dpt_hybrid_kitti":
+                prediction *= 256
+
+            if model_type == "dpt_hybrid_nyu":
+                prediction *= 1000.0
+
             if args.vis:
                 visualize_attention(sample, model, prediction, args.model_type)
-        #                exit()
 
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
@@ -160,9 +206,13 @@ if __name__ == "__main__":
         help="model type [dpt_large|dpt_hybrid|midas_v21]",
     )
 
+    parser.add_argument("--kitti_crop", dest="kitti_crop", action="store_true")
+
     parser.add_argument("--optimize", dest="optimize", action="store_true")
     parser.add_argument("--no-optimize", dest="optimize", action="store_false")
+
     parser.set_defaults(optimize=True)
+    parser.set_defaults(kitti_crop=False)
 
     args = parser.parse_args()
 
@@ -170,6 +220,8 @@ if __name__ == "__main__":
         "midas_v21": "weights/midas_v21-f6b98070.pt",
         "dpt_large": "weights/dpt_large-midas-2f21e586.pt",
         "dpt_hybrid": "weights/dpt_hybrid-midas-501f0c75.pt",
+        "dpt_hybrid_kitti": "weights/dpt_hybrid_kitti-cb926ef4.pt",
+        "dpt_hybrid_nyu": "weights/dpt_hybrid_nyu-2ce69ec7.pt",
     }
 
     if args.model_weights is None:
