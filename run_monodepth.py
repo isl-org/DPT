@@ -14,7 +14,7 @@ from dpt.models import DPTDepthModel
 from dpt.midas_net import MidasNet_large
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 
-from util.misc import visualize_attention
+#from util.misc import visualize_attention
 
 
 def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
@@ -38,7 +38,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             path=model_path,
             backbone="vitl16_384",
             non_negative=True,
-            enable_attention_hooks=args.vis,
+            enable_attention_hooks=False,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "dpt_hybrid":  # DPT-Hybrid
@@ -47,7 +47,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             path=model_path,
             backbone="vitb_rn50_384",
             non_negative=True,
-            enable_attention_hooks=args.vis,
+            enable_attention_hooks=False,
         )
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
     elif model_type == "dpt_hybrid_kitti":
@@ -61,7 +61,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             invert=True,
             backbone="vitb_rn50_384",
             non_negative=True,
-            enable_attention_hooks=args.vis,
+            enable_attention_hooks=False,
         )
 
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -76,7 +76,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             invert=True,
             backbone="vitb_rn50_384",
             non_negative=True,
-            enable_attention_hooks=args.vis,
+            enable_attention_hooks=False,
         )
 
         normalization = NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
@@ -168,9 +168,6 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
             if model_type == "dpt_hybrid_nyu":
                 prediction *= 1000.0
 
-            if args.vis:
-                visualize_attention(sample, model, prediction, args.model_type)
-
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
         )
@@ -196,8 +193,6 @@ if __name__ == "__main__":
     parser.add_argument(
         "-m", "--model_weights", default=None, help="path to model weights"
     )
-
-    parser.add_argument("--show-attention", dest="vis", action="store_true")
 
     parser.add_argument(
         "-t",
