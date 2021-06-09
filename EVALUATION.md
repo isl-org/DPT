@@ -34,27 +34,25 @@ Done.
 * Download [eval_with_pngs.py](https://raw.githubusercontent.com/cogaplex-bts/bts/5a55542ebbe849eb85b5ce9592365225b93d8b28/utils/eval_with_pngs.py) in the root folder
 * `python run_monodepth.py --model_type dpt_hybrid_nyu --absolute_depth`
 (or **for new model** `python run_monodepth.py --model_type dpt_hybrid_nyu --absolute_depth --model_weights weights/dpt_hybrid_nyu_new-217f207d.pt` )
-* `python ./eval_with_pngs.py --pred_path ./output_monodepth/ --gt_path ./input/gt/ --dataset nyu --max_depth_eval 10`
+* `python ./eval_with_pngs.py --pred_path ./output_monodepth/ --gt_path ./input/gt/ --dataset nyu --max_depth_eval 10  --eigen_crop`
+
+Result (old model) - **from paper**:
+```
+Evaluating 654 files
+GT files reading done
+0 GT files missing
+Computing errors
+     d1,      d2,      d3,  AbsRel,   SqRel,    RMSE, RMSElog,   SILog,   log10
+  0.904,   0.988,   0.998,   0.109,   0.054,   0.357,   0.129,   9.521,   0.045
+Done.
+```
 
 Result (new model):
 ```
-Evaluating 654 files
 GT files reading done
-0 GT files missing
+697 GT files missing
 Computing errors
      d1,      d2,      d3,  AbsRel,   SqRel,    RMSE, RMSElog,   SILog,   log10
-  0.904,   0.988,   0.998,   0.110,   0.055,   0.358,   0.129,   9.481,   0.045
+  0.905,   0.988,   0.998,   0.109,   0.055,   0.357,   0.129,   9.427,   0.045
 Done.
 ```
-
-Result (old model):
-```
-Evaluating 654 files
-GT files reading done
-0 GT files missing
-Computing errors
-     d1,      d2,      d3,  AbsRel,   SqRel,    RMSE, RMSElog,   SILog,   log10
-  0.903,   0.988,   0.998,   0.110,   0.054,   0.357,   0.130,   9.575,   0.045
-Done.
-```
-
