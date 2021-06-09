@@ -64,7 +64,7 @@ python run_monodepth -t [dpt_hybrid_kitti|dpt_hybrid_nyu]
 
 ### Evaluation
 
-Hints on how to evaluate monodepth models can be found here: https://github.com/intel-isl/DPT/EVALUATION.md
+Hints on how to evaluate monodepth models can be found here: https://github.com/intel-isl/DPT/blob/main/EVALUATION.md
 
 
 ### Citation
