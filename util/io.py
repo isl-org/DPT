@@ -168,7 +168,7 @@ def resize_depth(depth, width, height):
     return depth_resized
 
 
-def write_depth(path, depth, bits=1):
+def write_depth(path, depth, bits=1, absolute_depth=False):
     """Write depth map to pfm and png file.
 
     Args:
@@ -177,20 +177,23 @@ def write_depth(path, depth, bits=1):
     """
     write_pfm(path + ".pfm", depth.astype(np.float32))
 
-    depth_min = depth.min()
-    depth_max = depth.max()
-
-    max_val = (2 ** (8 * bits)) - 1
-
-    if depth_max - depth_min > np.finfo("float").eps:
-        out = max_val * (depth - depth_min) / (depth_max - depth_min)
+    if absolute_depth:
+        out = depth
     else:
-        out = np.zeros(depth.shape, dtype=depth.dtype)
+        depth_min = depth.min()
+        depth_max = depth.max()
+
+        max_val = (2 ** (8 * bits)) - 1
+
+        if depth_max - depth_min > np.finfo("float").eps:
+            out = max_val * (depth - depth_min) / (depth_max - depth_min)
+        else:
+            out = np.zeros(depth.shape, dtype=depth.dtype)
 
     if bits == 1:
-        cv2.imwrite(path + ".png", out.astype("uint8"))
+        cv2.imwrite(path + ".png", out.astype("uint8"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
     elif bits == 2:
-        cv2.imwrite(path + ".png", out.astype("uint16"))
+        cv2.imwrite(path + ".png", out.astype("uint16"), [cv2.IMWRITE_PNG_COMPRESSION, 0])
 
     return
 
