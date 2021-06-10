@@ -1,9 +1,11 @@
 ### Genral-purpose models
 The general-purpose models are affine-invariant and as such need a pre-alignment step before an error can be computed.
 
-Sample code can be found here:
+Sample code for NYUv2 can be found here:
 https://gist.github.com/ranftlr/a1c7a24ebb24ce0e2f2ace5bce917022
 
+Sample code for KITTI can be found here:
+https://gist.github.com/ranftlr/45f4c7ddeb1bbb88d606bc600cab6c8d
 
 
 ### KITTI
