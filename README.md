@@ -25,7 +25,7 @@ Segmentation:
 2) Set up dependencies: 
 
     ```shell
-    pip install torch torchvision opencv-python timm
+    pip install torch torchvision opencv-python timm==0.4.5
     ```
 
    The code was tested with Python 3.7, PyTorch 1.8.0, OpenCV 4.5.1, and timm 0.4.5
