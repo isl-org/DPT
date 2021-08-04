@@ -299,10 +299,12 @@ class BackboneWrapper(nn.Module):
 
         # HACK: this is to make TorchScript happy. Can't directly address modules,
         # so we gather all modules that have their activations set.
-        if self.hybrid_backbone:
-            for v in reversed(self.model.patch_embed.backbone.stages):
+        if self.hybrid_backbone and hasattr(self.model.patch_embed, "backbone"):
+            cnt = 0
+            for v in self.model.patch_embed.backbone.stages:
                 if hasattr(v, "activations"):
-                    layers.insert(0, v.activations)
+                    layers.insert(cnt, v.activations)
+                    cnt+=1
 
         layer_1, layer_2, layer_3, layer_4 = layers
 
@@ -327,7 +329,6 @@ def _make_pretrained_vitb_rn50_384(
     pretrained,
     use_readout="ignore",
     hooks=None,
-    use_vit_only=False,
     enable_attention_hooks=False,
 ):
     model = timm.create_model("vit_base_resnet50_384", pretrained=pretrained)
@@ -336,7 +337,6 @@ def _make_pretrained_vitb_rn50_384(
     return BackboneWrapper(
         model,
         features=[256, 512, 768, 768],
-        size=[384, 384],
         hooks=hooks,
         hybrid_backbone=True,
         use_readout=use_readout,

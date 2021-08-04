@@ -111,9 +111,10 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     model.eval()
 
     if optimize == True and device == torch.device("cuda"):
+        model = torch.jit.script(model)
         model = model.to(memory_format=torch.channels_last)
         model = model.half()
-
+    
     model.to(device)
 
     # get input
@@ -215,9 +216,9 @@ if __name__ == "__main__":
 
     default_models = {
         "midas_v21": "weights/midas_v21-f6b98070.pt",
-        "dpt_large": "weights/dpt_large-midas-2f21e586.pt",
-        "dpt_hybrid": "weights/dpt_hybrid-midas-501f0c75.pt",
-        "dpt_hybrid_kitti": "weights/dpt_hybrid_kitti-cb926ef4.pt",
+        "dpt_large": "weights/dpt_large-midas-b53ba79e.pt",
+        "dpt_hybrid": "weights/dpt_hybrid-midas-d889a10e.pt",
+        "dpt_hybrid_kitti": "weights/dpt_hybrid-nyu-b3a2ef48.pt",
         "dpt_hybrid_nyu": "weights/dpt_hybrid_nyu-2ce69ec7.pt",
     }
 

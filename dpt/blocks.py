@@ -18,7 +18,6 @@ def _make_encoder(
     expand=False,
     exportable=True,
     hooks=None,
-    use_vit_only=False,
     use_readout="ignore",
     enable_attention_hooks=False,
 ):
@@ -36,7 +35,6 @@ def _make_encoder(
         pretrained = _make_pretrained_vitb_rn50_384(
             use_pretrained,
             hooks=hooks,
-            use_vit_only=use_vit_only,
             use_readout=use_readout,
             enable_attention_hooks=enable_attention_hooks,
         )
