@@ -16,7 +16,6 @@ from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 
 #from util.misc import visualize_attention
 
-
 def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
     """Run MonoDepthNN to compute depth maps.
 
