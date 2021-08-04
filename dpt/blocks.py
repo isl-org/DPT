@@ -1,11 +1,12 @@
 import torch
 import torch.nn as nn
 
+from typing import List
+
 from .vit import (
     _make_pretrained_vitb_rn50_384,
     _make_pretrained_vitl16_384,
     _make_pretrained_vitb16_384,
-    forward_vit,
 )
 
 
@@ -147,7 +148,6 @@ class Interpolate(nn.Module):
         """
         super(Interpolate, self).__init__()
 
-        self.interp = nn.functional.interpolate
         self.scale_factor = scale_factor
         self.mode = mode
         self.align_corners = align_corners
@@ -162,9 +162,9 @@ class Interpolate(nn.Module):
             tensor: interpolated data
         """
 
-        x = self.interp(
+        x = nn.functional.interpolate(
             x,
-            scale_factor=self.scale_factor,
+            scale_factor=float(self.scale_factor),
             mode=self.mode,
             align_corners=self.align_corners,
         )
@@ -238,7 +238,7 @@ class FeatureFusionBlock(nn.Module):
         output = self.resConfUnit2(output)
 
         output = nn.functional.interpolate(
-            output, scale_factor=2, mode="bilinear", align_corners=True
+            output, scale_factor=2.0, mode="bilinear", align_corners=True
         )
 
         return output
@@ -282,6 +282,9 @@ class ResidualConvUnit_custom(nn.Module):
         if self.bn == True:
             self.bn1 = nn.BatchNorm2d(features)
             self.bn2 = nn.BatchNorm2d(features)
+        else:
+            self.bn1 = nn.Identity()
+            self.bn2 = nn.Identity()
 
         self.activation = activation
 
@@ -299,20 +302,13 @@ class ResidualConvUnit_custom(nn.Module):
 
         out = self.activation(x)
         out = self.conv1(out)
-        if self.bn == True:
-            out = self.bn1(out)
+        out = self.bn1(out)
 
         out = self.activation(out)
         out = self.conv2(out)
-        if self.bn == True:
-            out = self.bn2(out)
-
-        if self.groups > 1:
-            out = self.conv_merge(out)
+        out = self.bn2(out)
 
         return self.skip_add.add(out, x)
-
-        # return out + x
 
 
 class FeatureFusionBlock_custom(nn.Module):
@@ -359,12 +355,7 @@ class FeatureFusionBlock_custom(nn.Module):
 
         self.skip_add = nn.quantized.FloatFunctional()
 
-    def forward(self, *xs):
-        """Forward pass.
-
-        Returns:
-            tensor: output
-        """
+    def forward(self, xs: List[torch.Tensor]):
         output = xs[0]
 
         if len(xs) == 2:
@@ -375,7 +366,7 @@ class FeatureFusionBlock_custom(nn.Module):
         output = self.resConfUnit2(output)
 
         output = nn.functional.interpolate(
-            output, scale_factor=2, mode="bilinear", align_corners=self.align_corners
+            output, scale_factor=2.0, mode="bilinear", align_corners=self.align_corners
         )
 
         output = self.out_conv(output)

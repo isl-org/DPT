@@ -8,7 +8,6 @@ from .blocks import (
     FeatureFusionBlock_custom,
     Interpolate,
     _make_encoder,
-    forward_vit,
 )
 
 
@@ -65,21 +64,21 @@ class DPT(BaseModel):
 
         self.scratch.output_conv = head
 
-    def forward(self, x):
+    def forward_features(self, x):
         if self.channels_last == True:
             x.contiguous(memory_format=torch.channels_last)
 
-        layer_1, layer_2, layer_3, layer_4 = forward_vit(self.pretrained, x)
+        layer_1, layer_2, layer_3, layer_4 = self.pretrained(x)
 
         layer_1_rn = self.scratch.layer1_rn(layer_1)
         layer_2_rn = self.scratch.layer2_rn(layer_2)
         layer_3_rn = self.scratch.layer3_rn(layer_3)
         layer_4_rn = self.scratch.layer4_rn(layer_4)
 
-        path_4 = self.scratch.refinenet4(layer_4_rn)
-        path_3 = self.scratch.refinenet3(path_4, layer_3_rn)
-        path_2 = self.scratch.refinenet2(path_3, layer_2_rn)
-        path_1 = self.scratch.refinenet1(path_2, layer_1_rn)
+        path_4 = self.scratch.refinenet4([layer_4_rn])
+        path_3 = self.scratch.refinenet3([path_4, layer_3_rn])
+        path_2 = self.scratch.refinenet2([path_3, layer_2_rn])
+        path_1 = self.scratch.refinenet1([path_2, layer_1_rn])
 
         out = self.scratch.output_conv(path_1)
 
@@ -112,7 +111,7 @@ class DPTDepthModel(DPT):
             self.load(path)
 
     def forward(self, x):
-        inv_depth = super().forward(x).squeeze(dim=1)
+        inv_depth =  self.forward_features(x).squeeze(dim=1)
 
         if self.invert:
             depth = self.scale * inv_depth + self.shift
@@ -151,3 +150,6 @@ class DPTSegmentationModel(DPT):
 
         if path is not None:
             self.load(path)
+
+    def forward(self, x):
+        return self.forward_features(x)
