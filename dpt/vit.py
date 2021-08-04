@@ -90,93 +90,78 @@ class Transpose(nn.Module):
         return x
 
 
+def add_feature_hook(block):
+    def hook(model, input: Tuple[torch.Tensor], output: torch.Tensor):
+        model.activations = output
+        
+    block.activations = torch.Tensor()
+    block.register_forward_hook(hook)            
+
+
 class BackboneWrapper(nn.Module):    
-    def __init__(self, model, features=[256, 512, 768, 768], size=[384, 384], hooks=[0, 1, 8, 11], vit_features=768, use_vit_only=True, use_readout="ignore", start_index=1, enable_attention_hooks=False):
+    def __init__(self, model, features=[256, 512, 768, 768], size=[384, 384], hooks=[0, 1, 8, 11], vit_features=768, hybrid_backbone=False, use_readout="ignore", start_index=1, enable_attention_hooks=False):
         super().__init__()
 
         self.model = model        
         self.hooks = hooks
-        self.use_vit_only = use_vit_only
+        self.hybrid_backbone = hybrid_backbone
         
-        def hook(model, input: Tuple[torch.Tensor], output: torch.Tensor):
-            model.activations = output
+        # We use hooks to get featueres frome the hybrid backbone.
+        # Transformer features are directly acquired in self.forward_features        
+        if hybrid_backbone:
+            add_feature_hook(self.model.patch_embed.backbone.stages[0])
+            add_feature_hook(self.model.patch_embed.backbone.stages[1])
+            self.hooks = self.hooks[2:]
 
-        def add_hook(block):
-            block.activations = torch.Tensor()
-            block.register_forward_hook(hook)            
-
-        if use_vit_only == True:        
-            add_hook(self.model.blocks[hooks[0]])
-            add_hook(self.model.blocks[hooks[1]])
-        else:
-            add_hook(self.model.patch_embed.backbone.stages[0])
-            add_hook(self.model.patch_embed.backbone.stages[1])
-
-        self.model.blocks[hooks[2]].activations = torch.Tensor()
-        self.model.blocks[hooks[2]].register_forward_hook(hook)
-        
-        add_hook(self.model.blocks[hooks[3]])
-
-        if enable_attention_hooks:
-            self.model.blocks[2].attn.register_forward_hook(get_attention("attn_1"))
-            self.model.blocks[5].attn.register_forward_hook(get_attention("attn_2"))
-            self.model.blocks[8].attn.register_forward_hook(get_attention("attn_3"))
-            self.model.blocks[11].attn.register_forward_hook(get_attention("attn_4"))
-            self.attention = attention
-        
-        if use_vit_only == True:
-            self.readout_oper1 = self.make_readout_oper(vit_features, use_readout, start_index)
-            self.readout_oper2 = self.make_readout_oper(vit_features, use_readout, start_index)
-        else:
             self.readout_oper1 = nn.Identity()
-            self.readout_oper2 = nn.Identity()
-        
-        self.readout_oper3 = self.make_readout_oper(vit_features, use_readout, start_index)
-        self.readout_oper4 = self.make_readout_oper(vit_features, use_readout, start_index)
-        
-        if use_vit_only:
+            self.readout_oper2 = nn.Identity()            
+            self.act_postprocess1 = nn.Identity()
+            self.act_postprocess2 = nn.Identity()                    
+        else:
+            self.readout_oper1 = self._make_readout_oper(vit_features, use_readout, start_index)
+            self.readout_oper2 = self._make_readout_oper(vit_features, use_readout, start_index)
             self.act_postprocess1 = nn.Sequential(
-                nn.Conv2d(
-                    in_channels=vit_features,
-                    out_channels=features[0],
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                ),
-                nn.ConvTranspose2d(
-                    in_channels=features[0],
-                    out_channels=features[0],
-                    kernel_size=4,
-                    stride=4,
-                    padding=0,
-                    bias=True,
-                    dilation=1,
-                    groups=1,
-                ),
-            )
+                            nn.Conv2d(
+                                in_channels=vit_features,
+                                out_channels=features[0],
+                                kernel_size=1,
+                                stride=1,
+                                padding=0,
+                            ),
+                            nn.ConvTranspose2d(
+                                in_channels=features[0],
+                                out_channels=features[0],
+                                kernel_size=4,
+                                stride=4,
+                                padding=0,
+                                bias=True,
+                                dilation=1,
+                                groups=1,
+                            ),
+                        )
 
             self.act_postprocess2 = nn.Sequential(
-                nn.Conv2d(
-                    in_channels=vit_features,
-                    out_channels=features[1],
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                ),
-                nn.ConvTranspose2d(
-                    in_channels=features[1],
-                    out_channels=features[1],
-                    kernel_size=2,
-                    stride=2,
-                    padding=0,
-                    bias=True,
-                    dilation=1,
-                    groups=1,
-                ),
-            )
-        else:
-            self.act_postprocess1 = nn.Identity()
-            self.act_postprocess2 = nn.Identity()
+                            nn.Conv2d(
+                                in_channels=vit_features,
+                                out_channels=features[1],
+                                kernel_size=1,
+                                stride=1,
+                                padding=0,
+                            ),
+                            nn.ConvTranspose2d(
+                                in_channels=features[1],
+                                out_channels=features[1],
+                                kernel_size=2,
+                                stride=2,
+                                padding=0,
+                                bias=True,
+                                dilation=1,
+                                groups=1,
+                            ),
+                        )
+
+        self.readout_oper3 = self._make_readout_oper(vit_features, use_readout, start_index)
+        self.readout_oper4 = self._make_readout_oper(vit_features, use_readout, start_index)
 
         self.act_postprocess3 = nn.Sequential(
             nn.Conv2d(
@@ -207,8 +192,16 @@ class BackboneWrapper(nn.Module):
 
         self.start_index = start_index
         self.patch_size = [16, 16]
+        
+        if enable_attention_hooks:
+            self.model.blocks[2].attn.register_forward_hook(get_attention("attn_1"))
+            self.model.blocks[5].attn.register_forward_hook(get_attention("attn_2"))
+            self.model.blocks[8].attn.register_forward_hook(get_attention("attn_3"))
+            self.model.blocks[11].attn.register_forward_hook(get_attention("attn_4"))
+            self.attention = attention
 
-    def make_readout_oper(self, vit_features, use_readout: str, start_index):
+
+    def _make_readout_oper(self, vit_features, use_readout: str, start_index):
         if use_readout == "ignore":
             return nn.Sequential(Slice(start_index), Transpose(1,2))
         elif use_readout == "add":
@@ -267,30 +260,26 @@ class BackboneWrapper(nn.Module):
         x = x + pos_embed
         x = self.model.pos_drop(x)
 
-        for blk in self.model.blocks:
+        out_features = []  
+        for num, blk in enumerate(self.model.blocks):
             x = blk(x)
-
-        x = self.model.norm(x)
-
-        return x
+            if num in self.hooks:                        
+                out_features.append(x)
+                
+        return out_features
 
     def forward(self, x):
         _, _, h, w = x.shape
 
-        _ = self.forward_flex(x)
+        layers = self.forward_flex(x)
 
         # HACK: this is to make TorchScript happy. Can't directly address modules,
         # so we gather all modules that have their activations set.
-        layers = []
-        if not self.use_vit_only:
-            for _, v in enumerate(self.model.patch_embed.backbone.stages):
+        if self.hybrid_backbone:
+            for v in reversed(self.model.patch_embed.backbone.stages):
                 if hasattr(v, "activations"):
-                    layers.append(v.activations)
-
-        for _, v in enumerate(self.model.blocks):
-            if hasattr(v, "activations"):                
-                layers.append(v.activations)
-
+                    layers.insert(0, v.activations)
+        
         layer_1, layer_2, layer_3, layer_4 = layers
                     
         layer_1 = self.readout_oper1(layer_1)
@@ -300,7 +289,7 @@ class BackboneWrapper(nn.Module):
 
         out_size = torch.Size((h // self.patch_size[1], w // self.patch_size[0]))
 
-        if self.use_vit_only:
+        if not self.hybrid_backbone:
             layer_1 = self.act_postprocess1(layer_1.unflatten(2, out_size))
             layer_2 = self.act_postprocess2(layer_2.unflatten(2, out_size))
             
@@ -325,7 +314,7 @@ def _make_pretrained_vitb_rn50_384(
         features=[256, 512, 768, 768],
         size=[384, 384],
         hooks=hooks,
-        use_vit_only=use_vit_only,
+        hybrid_backbone=True,
         use_readout=use_readout,
         enable_attention_hooks=enable_attention_hooks,
     )
