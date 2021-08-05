@@ -73,7 +73,6 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         model = torch.jit.script(model)
         model = model.half()
 
-    print(model)
     model.to(device)
 
     # get input
