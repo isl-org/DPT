@@ -14,7 +14,8 @@ from dpt.models import DPTDepthModel
 from dpt.midas_net import MidasNet_large
 from dpt.transforms import Resize, NormalizeImage, PrepareForNet
 
-#from util.misc import visualize_attention
+# from util.misc import visualize_attention
+
 
 def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=True):
     """Run MonoDepthNN to compute depth maps.
@@ -113,7 +114,7 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         model = torch.jit.script(model)
         model = model.to(memory_format=torch.channels_last)
         model = model.half()
-    
+
     model.to(device)
 
     # get input
@@ -171,7 +172,9 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         filename = os.path.join(
             output_path, os.path.splitext(os.path.basename(img_name))[0]
         )
-        util.io.write_depth(filename, prediction, bits=2, absolute_depth=args.absolute_depth)
+        util.io.write_depth(
+            filename, prediction, bits=2, absolute_depth=args.absolute_depth
+        )
 
     print("finished")
 

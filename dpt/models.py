@@ -26,6 +26,7 @@ class DPT(BaseModel):
     def __init__(
         self,
         head,
+        path=None,
         features=256,
         backbone="vitb_rn50_384",
         readout="project",
@@ -64,6 +65,9 @@ class DPT(BaseModel):
 
         self.scratch.output_conv = head
 
+        if path is not None:
+            self.load(path)
+
     def forward_features(self, x):
         if self.channels_last == True:
             x.contiguous(memory_format=torch.channels_last)
@@ -87,8 +91,8 @@ class DPT(BaseModel):
 
 class DPTDepthModel(DPT):
     def __init__(
-        self, path=None, non_negative=True, scale=1.0, shift=0.0, invert=False, **kwargs
-    ):
+        self, non_negative=True, scale=1.0, shift=0.0, invert=False, **kwargs
+    ):  
         features = kwargs["features"] if "features" in kwargs else 256
 
         self.scale = scale
@@ -106,9 +110,6 @@ class DPTDepthModel(DPT):
 
         super().__init__(head, **kwargs)
 
-        if path is not None:
-            self.load(path)
-
     def forward(self, x):
         inv_depth = self.forward_features(x).squeeze(dim=1)
 
@@ -122,7 +123,7 @@ class DPTDepthModel(DPT):
 
 
 class DPTSegmentationModel(DPT):
-    def __init__(self, num_classes, path=None, **kwargs):
+    def __init__(self, num_classes, **kwargs):
 
         features = kwargs["features"] if "features" in kwargs else 256
 
@@ -138,17 +139,6 @@ class DPTSegmentationModel(DPT):
         )
 
         super().__init__(head, **kwargs)
-
-        self.auxlayer = nn.Sequential(
-            nn.Conv2d(features, features, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(features),
-            nn.ReLU(True),
-            nn.Dropout(0.1, False),
-            nn.Conv2d(features, num_classes, kernel_size=1),
-        )
-
-        if path is not None:
-            self.load(path)
 
     def forward(self, x):
         return self.forward_features(x)
