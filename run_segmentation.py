@@ -68,9 +68,12 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
     model.eval()
 
     if optimize == True and device == torch.device("cuda"):
-        model = model.to(memory_format=torch.channels_last)
+        ## TODO: channels_last + half doesn't work in PyTorch 1.9, revisit!
+        # model = model.to(memory_format=torch.channels_last)  
+        model = torch.jit.script(model)
         model = model.half()
 
+    print(model)
     model.to(device)
 
     # get input
@@ -94,7 +97,8 @@ def run(input_path, output_path, model_path, model_type="dpt_hybrid", optimize=T
         with torch.no_grad():
             sample = torch.from_numpy(img_input).to(device).unsqueeze(0)
             if optimize == True and device == torch.device("cuda"):
-                sample = sample.to(memory_format=torch.channels_last)
+                ## TODO: channels_last + half doesn't work in PyTorch 1.9, revisit!
+                # sample = sample.to(memory_format=torch.channels_last)
                 sample = sample.half()
 
             out = model.forward(sample)
@@ -142,8 +146,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     default_models = {
-        "dpt_large": "weights/dpt_large-ade20k-b12dca68.pt",
-        "dpt_hybrid": "weights/dpt_hybrid-ade20k-53898607.pt",
+        "dpt_large": "weights/dpt_large-ade20k-078062de.pt",
+        "dpt_hybrid": "weights/dpt_hybrid-ade20k-a7d10e8d.pt",
     }
 
     if args.model_weights is None:
