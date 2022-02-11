@@ -186,7 +186,7 @@ def write_depth(path, depth, bits=1, absolute_depth=False):
         max_val = (2 ** (8 * bits)) - 1
 
         if depth_max - depth_min > np.finfo("float").eps:
-            out = max_val * (depth - depth_min) / (depth_max - depth_min)
+            out = (depth - depth_min) / (depth_max - depth_min) * max_val
         else:
             out = np.zeros(depth.shape, dtype=depth.dtype)
 
