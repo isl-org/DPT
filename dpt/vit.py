@@ -318,11 +318,17 @@ class BackboneWrapper(nn.Module):
         out_size = torch.Size((h // self.patch_size[1], w // self.patch_size[0]))
 
         if not self.hybrid_backbone:
-            layer_1 = self.act_postprocess1(layer_1.unflatten(2, out_size))
-            layer_2 = self.act_postprocess2(layer_2.unflatten(2, out_size))
+            # according to https://github.com/isl-org/DPT/issues/42#issuecomment-944657114
+            # layer_1 = self.act_postprocess1(layer_1.unflatten(2, out_size))
+            # layer_2 = self.act_postprocess2(layer_2.unflatten(2, out_size))
+            layer_1 = self.act_postprocess1(layer_1.view(layer_1.shape[0], layer_1.shape[1], *out_size))
+            layer_2 = self.act_postprocess2(layer_2.view(layer_2.shape[0], layer_2.shape[1], *out_size))
 
-        layer_3 = self.act_postprocess3(layer_3.unflatten(2, out_size))
-        layer_4 = self.act_postprocess4(layer_4.unflatten(2, out_size))
+        # according to https://github.com/isl-org/DPT/issues/42#issuecomment-944657114
+        # layer_3 = self.act_postprocess3(layer_3.unflatten(2, out_size))
+        # layer_4 = self.act_postprocess4(layer_4.unflatten(2, out_size))
+        layer_3 = self.act_postprocess3(layer_3.view(layer_3.shape[0], layer_3.shape[1], *out_size))
+        layer_4 = self.act_postprocess4(layer_4.view(layer_4.shape[0], layer_4.shape[1], *out_size))
 
         return layer_1, layer_2, layer_3, layer_4
 
