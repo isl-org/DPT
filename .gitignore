@@ -110,3 +110,4 @@ venv.bak/
 *.pt
 .DS_Store
 src/libtorch/
+*.sh
