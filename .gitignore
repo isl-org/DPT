@@ -109,3 +109,6 @@ venv.bak/
 *.jpeg
 *.pt
 .DS_Store
+src/libtorch/
+*.sh
+.vscode/settings.json
