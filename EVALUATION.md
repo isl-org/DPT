@@ -1,4 +1,4 @@
-### Genral-purpose models
+### General-purpose models
 The general-purpose models are affine-invariant and as such need a pre-alignment step before an error can be computed.
 
 Sample code for NYUv2 can be found here:
