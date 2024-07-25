@@ -1,4 +1,4 @@
-torch==1.8.1
+torch==2.2.0
 torchvision==0.9.1
 opencv-python==4.5.2.54
 timm==0.4.5
