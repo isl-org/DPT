@@ -13,6 +13,7 @@ This repository contains code and models for our [paper](https://arxiv.org/abs/2
 
 
 ### Changelog 
+* [Sep 2021] Integrated to [Huggingface Spaces](https://huggingface.co/spaces) with [Gradio](https://github.com/gradio-app/gradio). See [Gradio Web Demo](https://huggingface.co/spaces/akhaliq/DPT-Large).
 * [March 2021] Initial release of inference code and models
 
 ### Setup 
